@@ -47,7 +47,7 @@ pip install numpy torch librosa scikit-learn soundfile
 # Download granular_pool_v2_int16.npz (4.9 GB) and granular_multi_v1.pt (5.3 MB)
 # from https://huggingface.co/0penAGI/0MGE
 
-# Generate
+# Generate (model already trained, no --train-multi needed)
 python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt --bars 60 --multi-stream
 ```
 
