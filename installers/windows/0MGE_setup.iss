@@ -8,7 +8,7 @@ AppVersion=1.0.0
 AppPublisher=0penAGI
 DefaultDirName={commoncf}\0MGE
 DefaultGroupName=0MGE
-OutputDir=..\windows
+OutputDir=Output
 OutputBaseFilename=0MGE-1.0.0-Windows-Setup
 Compression=lzma
 SolidCompression=yes
@@ -16,22 +16,12 @@ ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=admin
 
 [Files]
-; VST3 plugin
-Source: "..\..\vst\build\0MGE.vst3\*"; DestDir: "{commoncf64}\VST3\0MGE.vst3"; Flags: recursesubdirs ignoreversion
-
-; Standalone (if exists)
-; Source: "..\..\vst\build\Release\0MGE.exe"; DestDir: "{app}"; Flags: ignoreversion
+; VST3 plugin - works with both local build and CI build
+Source: "..\..\vst\build-windows\Release\0MGE.vst3\*"; DestDir: "{commoncf64}\VST3\0MGE.vst3"; Flags: recursesubdirs ignoreversion
+Source: "..\..\vst\build\0MGE.vst3\*"; DestDir: "{commoncf64}\VST3\0MGE.vst3"; Flags: recursesubdirs ignoreversion skipifsourcedoesntexist
 
 [Icons]
-; Start Menu shortcut to uninstall
 Name: "{group}\Uninstall 0MGE"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{cmd}"; Parameters: "/C echo Restart your DAW to see 0MGE plugin."; Flags: runhidden
-
-[Code]
-// Check if DAW is running
-function InitializeSetup: Boolean;
-begin
-  Result := True;
-end;
