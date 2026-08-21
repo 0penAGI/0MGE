@@ -15,10 +15,23 @@ SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=admin
 
+[Types]
+Name: "full"; Description: "Plugins + App"; Flags: iscustom
+Name: "plugins"; Description: "VST3 Plugin only"
+Name: "app"; Description: "Standalone App only"
+
+[Components]
+Name: "plugins"; Description: "VST3 Plugin (for DAW: Ableton, Reaper, FL Studio, etc)"; Types: full plugins; Flags: fixed
+Name: "app"; Description: "Standalone App (scan music, train, generate)"; Types: full app
+
 [Files]
-; VST3 plugin - works with both local build and CI build
-Source: "..\..\vst\build-windows\Release\0MGE.vst3\*"; DestDir: "{commoncf64}\VST3\0MGE.vst3"; Flags: recursesubdirs ignoreversion
-Source: "..\..\vst\build\0MGE.vst3\*"; DestDir: "{commoncf64}\VST3\0MGE.vst3"; Flags: recursesubdirs ignoreversion skipifsourcedoesntexist
+; VST3 plugin
+Source: "..\..\vst\build-windows\Release\0MGE.vst3\*"; DestDir: "{commoncf64}\VST3\0MGE.vst3"; Flags: recursesubdirs ignoreversion; Components: plugins
+Source: "..\..\vst\build\0MGE.vst3\*"; DestDir: "{commoncf64}\VST3\0MGE.vst3"; Flags: recursesubdirs ignoreversion skipifsourcedoesntexist; Components: plugins
+
+; Standalone app
+Source: "..\..\vst\build-windows\Release\0MGE.exe"; DestDir: "{app}"; Flags: ignoreversion; Components: app
+Source: "..\..\vst\build\Release\0MGE.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist; Components: app
 
 [Icons]
 Name: "{group}\Uninstall 0MGE"; Filename: "{uninstallexe}"

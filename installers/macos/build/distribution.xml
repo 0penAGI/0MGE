@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
-    <title>0MGE - 0penAGI Music Granular Engine</title>
+    <title>0MGE - 0penAGI Neural Granular Engine</title>
     <options customize="never" require-scripts="true" hostArchitectures="x86_64,arm64"/>
     <domains enable_localSystem="true"/>
     <choices-outline>
-        <line choice="0MGE"/>
+        <line choice="plugins"/>
+        <line choice="app"/>
     </choices-outline>
-    <choice id="0MGE" title="0MGE Plugin">
-        <pkg-ref id="com.0penagi.0mge"/>
+    <choice id="plugins" title="VST3 + AU Plugin" description="Granular processor for your DAW (Logic, Ableton, Reaper, etc)">
+        <pkg-ref id="com.0penagi.0mge.plugins"/>
     </choice>
-    <pkg-ref id="com.0penagi.0mge" version="1.0.0">0MGE-component.pkg</pkg-ref>
+    <choice id="app" title="Standalone App" description="Desktop app to scan your music, train, and generate new sound">
+        <pkg-ref id="com.0penagi.0mge.app"/>
+    </choice>
+    <pkg-ref id="com.0penagi.0mge.plugins" version="1.0.0">0MGE-plugins-component.pkg</pkg-ref>
+    <pkg-ref id="com.0penagi.0mge.app" version="1.0.0">0MGE-app-component.pkg</pkg-ref>
 </installer-gui-script>
