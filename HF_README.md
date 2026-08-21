@@ -68,18 +68,17 @@ Output: `granular_output/granular_60bars_*.wav` (stereo, 22050 Hz).
 
 | File | Size | Description |
 |------|------|-------------|
-| `granular_multi_v1.pt` | 5.3 MB | FP32 6-stream navigator |
-| `granular_multi_v1_int8.npz` | 1.4 MB | Navigator INT8 quantized (weights only, not the grain pool) |
+| `granular_multi_v1.pt` | 6.4 MB | FP32 6-stream navigator with attractor field |
+| `granular_multi_v1_int8.npz` | 1.6 MB | Navigator INT8 quantized (weights only, not the grain pool) |
 | `granular_multi_v1_int8_meta.json` | 0.4 KB | INT8 scale metadata |
-| `granular_multi_v1_fp16.pt` | 2.7 MB | FP16 half-precision |
-| `granular_pool_v2_int16.npz` | 4.9 GB | Full grain pool, 566K grains, INT16 with per-row peak normalization |
+| `granular_pool_v2_int16.npz` | 5.8 GB | Full grain pool, 566K grains, INT16 with per-row peak normalization |
 | `granular_pool_lite.npz` | 64 MB | Features only (22-dim), no raw audio |
 
 ---
 
 ## Architecture
 
-**MultiNavigator** — Transformer (4 heads, 3 layers, 192 hidden). 48-dim state, 12-step context. 6 independent stream heads select grains via softmax over pool similarities.
+**MultiNavigator** — Transformer (4 heads, 3 layers, 192 hidden). 48-dim state, 12-step context. 6 independent stream heads select grains via softmax over pool similarities. **Attractor field** (z0-inspired) provides learned global state per stream for long-range coherence — pulls generation toward meaningful musical directions instead of random walk.
 
 | Stream | Band | Role |
 |--------|------|------|
@@ -118,12 +117,14 @@ Three-tier hierarchy extracted via STFT (n_fft=1024, hop=256):
 
 ## Audio Samples
 
-| Sample | Duration | Model |
-|--------|----------|-------|
-| `samples/drone-01.mp3` | 16s | INT8 quantized |
-| `samples/drone-02.mp3` | 32s | FP32 6-stream |
-| `samples/drone-03.mp3` | 60s | Full pool demo |
-| `samples/drone-04-int8.mp3` | 16s | Quantization comparison |
+| Sample | Duration | Seed | Critic |
+|--------|----------|------|--------|
+| `samples/drone-01.mp3` | 60s | 42 | 0.375 |
+| `samples/drone-02.mp3` | 60s | 1337 | 0.371 |
+| `samples/drone-03.mp3` | 60s | 2026 | 0.400 |
+| `samples/drone-04.mp3` | 60s | 777 | 0.374 |
+| `samples/drone-05.mp3` | 60s | 314 | 0.355 |
+| `samples/drone-06.mp3` | 60s | 256 | 0.376 |
 
 ---
 
