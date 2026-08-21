@@ -46,7 +46,6 @@ MAX_MESO_PER_FILE = 100
 MAX_MACRO_PER_FILE = 30
 
 N_STREAMS = 6
-N_ATTRACTORS = 6  # one per stream — learned global direction for long-range coherence
 STREAM_NAMES = ["sub", "drums", "harmonic", "texture", "noise", "air"]
 STREAM_BANDS = [
     (20, 120),      # sub — deep bass
@@ -360,19 +359,6 @@ class MultiNavigator(nn.Module):
         self.stream_embed = nn.Parameter(torch.randn(1, n_streams, hidden) * 0.05)
         self.cond_proj = nn.Linear(4, hidden)
 
-        # ── Attractor field: learned global state per stream ──────────
-        # Unlike ctx_z (sliding window, local), attractors persist across the
-        # full generation. They pull the sound toward a learned direction —
-        # the z0 hypothesis: a global hint layered on top of local coherence.
-        self.attractor_embed = nn.Parameter(torch.randn(n_streams, hidden) * 0.05)
-        self.attractor_proj = nn.Linear(hidden, hidden)
-        self.attractor_gate = nn.Sequential(
-            nn.Linear(hidden * 2, hidden), nn.GELU(), nn.Linear(hidden, hidden), nn.Sigmoid())
-        self.attractor_update = nn.Sequential(
-            nn.Linear(hidden * 2, hidden), nn.GELU(), nn.Linear(hidden, hidden), nn.Tanh())
-        # running attractor state per stream: updated during generation, frozen during training
-        self.register_buffer("attractor_state", torch.zeros(n_streams, hidden))
-
     def forward(self, states, stream_idx=0, cond=None):
         B, K, _ = states.shape
         z = self.proj(self.feat_enc(states)) + self.pos[:, :K, :]
@@ -382,47 +368,21 @@ class MultiNavigator(nn.Module):
         # stream_idx can be int, scalar tensor, or batch tensor [B]
         if isinstance(stream_idx, int):
             se = self.stream_embed[:, stream_idx:stream_idx+1].expand(B, -1, -1)
-            as_ = self.attractor_state[stream_idx:stream_idx+1].expand(B, -1, -1)
         elif stream_idx.dim() == 0:
             se = self.stream_embed[:, stream_idx:stream_idx+1].expand(B, -1, -1)
-            as_ = self.attractor_state[stream_idx:stream_idx+1].expand(B, -1, -1)
         else:
-            se = self.stream_embed.squeeze(0)[stream_idx].unsqueeze(1)
-            as_ = self.attractor_state[stream_idx].unsqueeze(1)
+            # stream_idx is [B] — gather per-sample
+            se = self.stream_embed.squeeze(0)[stream_idx]  # [B, hidden]
+            se = se.unsqueeze(1)  # [B, 1, hidden]
 
         crossed, _ = self.cross_stream(se, z, z)
-
-        # attractor pull: how much the global state influences this step
-        ag = self.attractor_gate(torch.cat([ctx_z, as_.squeeze(1)], dim=-1))
-        a_pull = ag * self.attractor_proj(as_.squeeze(1))
-
-        h = (ctx_z + crossed.squeeze(1) + a_pull) / 3
+        h = (ctx_z + crossed.squeeze(1)) / 2
 
         if cond is not None:
             h = h + self.cond_proj(cond)
 
         return (self.stream_cluster(h), self.stream_level(h),
                 self.stream_params(h), self.stream_density(h), self.stream_pan(h))
-
-    def update_attractors(self, states, stream_idx, temp=0.8):
-        """Update attractor states from the current context — called during generation."""
-        with torch.no_grad():
-            if states.dim() == 2: states = states.unsqueeze(0)
-            z = self.proj(self.feat_enc(states))
-            z = self.transformer(z)
-            ctx_z = z[:, -1, :]  # [B, hidden]
-            if isinstance(stream_idx, int):
-                as_ = self.attractor_state[stream_idx:stream_idx+1].expand_as(ctx_z)  # [B, hidden]
-                new_state = self.attractor_update(torch.cat([ctx_z, as_], dim=-1))
-                self.attractor_state[stream_idx] = 0.9 * self.attractor_state[stream_idx] + 0.1 * new_state.mean(0)
-            else:
-                idx = stream_idx if isinstance(stream_idx, list) else stream_idx.tolist()
-                n = len(idx)
-                as_ = self.attractor_state[idx]  # [n, hidden]
-                ctx_z_exp = ctx_z.expand(n, -1)  # [n, hidden] — broadcast single context to all streams
-                new_state = self.attractor_update(torch.cat([ctx_z_exp, as_], dim=-1))
-                for i, s in enumerate(idx):
-                    self.attractor_state[s] = 0.9 * self.attractor_state[s] + 0.1 * new_state[i]
 
     @torch.no_grad()
     def step(self, states, stream_idx=0, temp=0.8, cond=None):
@@ -1122,11 +1082,7 @@ def train_multi(model, pairs, n_steps=TRAIN_STEPS):
             loss_p = F.mse_loss(pr, tgt_p)
             loss_dn = F.mse_loss(dn.squeeze(-1), tgt_dn)
             loss_pn = F.mse_loss(pn.squeeze(-1), tgt_pn)
-            # attractor coherence: push attractor state toward the mean of the target context
-            # this teaches attractors to represent meaningful musical directions
-            ctx_proj = model.proj(model.feat_enc(ctx)).mean(dim=1)  # [B, hidden]
-            loss_at = 0.1 * F.mse_loss(model.attractor_state[stream_idx], ctx_proj)
-            loss = loss_c + loss_l + loss_p + 0.5 * loss_dn + 0.5 * loss_pn + loss_at
+            loss = loss_c + loss_l + loss_p + 0.5 * loss_dn + 0.5 * loss_pn
 
             opt.zero_grad(); loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -1161,9 +1117,6 @@ def generate_multi(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8,
     stream_steps = [[] for _ in range(N_STREAMS)]
     ctx = all_f[np.random.choice(len(all_f), CONTEXT_LEN, replace=True)]
 
-    # reset attractor states for fresh generation
-    model.attractor_state.zero_()
-
     for si in range(n_steps):
         if si % 50 == 0: print(f"\r  [{si}/{n_steps}]", end="", flush=True)
         ct = torch.tensor(ctx, dtype=torch.float32).unsqueeze(0).to(DEVICE)
@@ -1184,9 +1137,6 @@ def generate_multi(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8,
                 "pos_offset": float(result["params"][5] * 0.3),
                 "reverse": bool(result["params"][6] > 0),
             })
-
-        # attractor update: each stream pulls its global state toward the current context
-        model.update_attractors(ct, stream_idx=list(range(N_STREAMS)), temp=temp)
 
         # Feedback: pick a grain from the cluster, get its features for context
         feedback_feat = _cluster_feat_for_ctx(stream_steps[0][-1]["cluster"], engine, all_f)
@@ -1424,8 +1374,8 @@ def main():
         if args.train_multi:
             model_ms = MultiNavigator().to(DEVICE)
             if os.path.exists(MODEL_MULTI_CACHE):
-                print(f"📦 Loading multi-model (strict=False for attractor init): {MODEL_MULTI_CACHE}")
-                model_ms.load_state_dict(torch.load(MODEL_MULTI_CACHE, map_location=DEVICE, weights_only=False)["model_state"], strict=False)
+                print(f"📦 Loading multi-model: {MODEL_MULTI_CACHE}")
+                model_ms.load_state_dict(torch.load(MODEL_MULTI_CACHE, map_location=DEVICE, weights_only=False)["model_state"])
             model_ms = train_multi(model_ms, pairs, n_steps=args.train_steps)
             torch.save({"model_state": model_ms.state_dict()}, MODEL_MULTI_CACHE)
         else:
@@ -1449,7 +1399,7 @@ def main():
     model_ms = MultiNavigator().to(DEVICE)
     if os.path.exists(multi_model_path):
         print(f"📦 Loading multi-model: {multi_model_path}")
-        model_ms.load_state_dict(torch.load(multi_model_path, map_location=DEVICE, weights_only=False)["model_state"], strict=False)
+        model_ms.load_state_dict(torch.load(multi_model_path, map_location=DEVICE, weights_only=False)["model_state"])
 
     single_model_path = args.model if args.model else MODEL_CACHE
     model = Navigator().to(DEVICE)
