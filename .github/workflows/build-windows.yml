@@ -10,54 +10,37 @@ jobs:
     runs-on: windows-latest
     defaults:
       run:
-        shell: pwsh
+        shell: cmd
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: Configure + Build
+      - name: Build
         run: |
-          # Find Visual Studio installation
-          $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vsPath = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          Write-Host "VS: $vsPath"
-
-          # Load MSVC environment
-          $vcvarsall = Join-Path $vsPath "VC\Auxiliary\Build\vcvarsall.bat"
-          cmd /c "`"$vcvarsall`" x64 && set" | ForEach-Object {
-            if ($_ -match "^(.+?)=(.*)$") {
-              [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2])
-            }
-          }
-
-          # Install Ninja
-          choco install ninja -y --no-progress
-
-          # Build
           cd vst
-          New-Item -ItemType Directory -Force -Path build-windows | Out-Null
-          cd build-windows
-          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl 2>&1
-          cmake --build . 2>&1
+          mkdir build-windows && cd build-windows
+          cmake .. -G "Visual Studio 17 2022" -A x64
+          if %ERRORLEVEL% neq 0 exit /b 1
+          cmake --build . --config Release
+          if %ERRORLEVEL% neq 0 exit /b 1
 
-      - name: Show output
+      - name: Find output
         if: always()
         run: |
-          Get-ChildItem -Recurse vst/build-windows -Include "*.vst3","*.exe","*.dll" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+          dir /s /b vst\build-windows\*.vst3
+          dir /s /b vst\build-windows\Release\
 
-      - name: Create installer
+      - name: Inno Setup
         if: success()
         run: |
           choco install innosetup -y --no-progress
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\windows\0MGE_setup.iss 2>&1
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\windows\0MGE_setup.iss
 
       - name: Upload plugin
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: 0MGE-windows-vst3
-          path: vst/build-windows/0MGE.vst3
+          path: vst/build-windows/Release/0MGE.vst3
 
       - name: Upload installer
         if: success()
@@ -71,6 +54,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            vst/build-windows/0MGE.vst3
+            vst/build-windows/Release/0MGE.vst3
             installers/windows/Output/*.exe
           generate_release_notes: true
