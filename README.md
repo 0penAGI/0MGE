@@ -75,7 +75,42 @@ python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_mul
 
 ### VST3/AU Plugin (`vst/`)
 
-Real-time granular processor for DAWs. Separate from the neural engine — takes incoming audio and chops it into grains live. 32 voices, 9 knobs.
+**Completely separate from the neural engine.** A real-time granular processor built with JUCE 8.0.6. No AI — pure DSP.
+
+Takes incoming audio from your DAW and chops it into grains in real time. Each grain is a tiny snapshot of the input signal, played back with its own pitch, position, direction, and spatial placement. The result: input audio is shredded and reassembled into evolving textures.
+
+**Grain engine:**
+- 32 persistent voices, COLA Hanning envelope (click-free)
+- Circular buffer (10s at 48kHz) stores incoming audio
+- Voices spawn at intervals determined by Density — each voice reads a random slice from the buffer
+- Grain size: 30–330ms (Size knob), with ±15% jitter per voice
+- Pitch: ±24 semitones, applied as playback rate
+- Stretch: slows down or speeds up grain read position (0.25×–4×)
+- Reverse: probability-based per grain (0–100%)
+- Scatter: random pitch variation per grain (±8% at max)
+- Spatial: pan ±0.5, Focus controls stereo spread (0.3–1.0×)
+
+**Freeze reverb:**
+- LP filter in feedback path (cutoff 2–8% of SR)
+- 12% L/R crossfeed in feedback loop
+- Creates evolving drones from any input signal
+- When freeze > 50%, feedback buffer holds the last sound indefinitely
+
+**9 knobs:**
+
+| Knob | Range | What it does |
+|------|-------|-------------|
+| Density | 0.1–6.0 | How many voices spawn per hop (1–4 voices) |
+| Pitch | ±24 st | Playback rate of grains |
+| Stretch | 0.25–4× | Time-stretch factor |
+| Reverse | 0–100% | Probability of grain playing backwards |
+| Size | 0–100% | Grain duration (30–330ms) |
+| Scatter | 0–100% | Random pitch variation per grain |
+| Mix | 0–100% | Dry/wet crossfade |
+| Freeze | 0–100% | Feedback amount (reverb/drone) |
+| Focus | 0–100% | Stereo spread (narrow ↔ wide) |
+
+**UI:** spectral visualization (8 bands), centroid display, real-time waveform, glassmorphism particles. Light theme.
 
 ```bash
 cd vst && mkdir build && cd build
