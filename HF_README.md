@@ -9,17 +9,35 @@ tags:
   - sound-design
   - quantization
   - pytorch
+  - music-generation
+  - generative-audio
+  - drone-synthesis
+  - texture-generation
+  - spectral-analysis
+  - local-ai
+  - open-source
+  - transformer
+  - signal-processing
+pipeline_tag: other
 ---
 
 # 0MGE: Neural Granular Engine
 
-Pre-trained neural granular engine trained on 2389 tracks (~48 hours). Generates new drone landscapes, textures, and atmospheres from a learned grain field.
+> **AI music generation from YOUR music.** Scan, train, generate — all locally. No cloud, no API, no subscription.
+
+Pre-trained neural granular engine trained on 2389 tracks (~48 hours of music). Generates new drone landscapes, textures, and atmospheres from a learned grain field.
+
+[![GitHub](https://img.shields.io/badge/GitHub-0penAGI%2F0MGE-black?logo=github)](https://github.com/0penAGI/0MGE)
+[![Demo](https://img.shields.io/badge/Listen-Demo-orange)](https://0penagi.github.io/0MGE/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ![Desktop App](app.png)
 
 ![VST Plugin](vst.png)
 
 **Full source code, training pipeline, and desktop app:** [0MGE on GitHub](https://github.com/0penAGI/0MGE)
+
+**[Listen to demo](https://0penagi.github.io/0MGE/)** — audio-reactive player with GLSL shader
 
 ---
 
@@ -51,7 +69,7 @@ Output: `granular_output/granular_60bars_*.wav` (stereo, 22050 Hz).
 | File | Size | Description |
 |------|------|-------------|
 | `granular_multi_v1.pt` | 5.3 MB | FP32 6-stream navigator |
-| `granular_multi_v1_int8.npz` | 1.4 MB | INT8 quantized (weight-only, per-tensor) |
+| `granular_multi_v1_int8.npz` | 1.4 MB | Navigator INT8 quantized (weights only, not the grain pool) |
 | `granular_multi_v1_int8_meta.json` | 0.4 KB | INT8 scale metadata |
 | `granular_multi_v1_fp16.pt` | 2.7 MB | FP16 half-precision |
 | `granular_pool_v2_int16.npz` | 4.9 GB | Full grain pool, 566K grains, INT16 with per-row peak normalization |

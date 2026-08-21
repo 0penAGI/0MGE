@@ -1,187 +1,124 @@
 # 0MGE — Neural Granular Engine
 
-A neural network that learns from YOUR music and generates new sound.
+> **AI music generation from YOUR music.** No cloud. No API. No subscription. Runs entirely on your machine.
 
-Launch the app. Point it at your music folder. It scans, trains, and generates — all locally on your machine. No cloud, no API, no subscription.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-yellow.svg)](https://python.org)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-brightgreen.svg)]()
+[![HuggingFace](https://img.shields.io/badge/🤗-Models-blue.svg)](https://huggingface.co/0penAGI/0MGE)
+[![Demo](https://img.shields.io/badge/Demo-Listen-orange.svg)](https://0penagi.github.io/0MGE/)
+
+A neural network that learns from YOUR music and generates new sound. Launch the app, point it at your music folder — it scans, trains, and generates. All locally.
+
+**[Listen to demo](https://0penagi.github.io/0MGE/)** · **[Download models](https://huggingface.co/0penAGI/0MGE)** · **[VST Plugin](#vst3au-plugin)**
+
+---
+
+## What is 0MGE?
+
+0MGE is a **neural granular engine** — it scans your music library, extracts millions of micro-grains (tiny audio fragments), trains a neural navigator on them, and generates entirely new drone landscapes and textures.
+
+**Your music IS the instrument.** Different library = different output. That's the point.
+
+It's NOT text-to-music. It doesn't generate beats or songs. It learns the sonic DNA of your library and reassembles it into something new.
 
 ---
 
 ## Quick Start
 
-```bash
-# macOS / Linux
-./bootstrap.sh
+### Option 1: Desktop App (Recommended)
 
-# Windows
-setup.bat
+```bash
+git clone https://github.com/0penAGI/0MGE.git && cd 0MGE
+./bootstrap.sh    # macOS / Linux
+# or: setup.bat   # Windows
 ```
 
-Opens the desktop app. Select your music folder, hit Generate.
+Opens the desktop app. Select your music folder, hit Generate. That's it.
 
-That's it. It scans your library, builds a grain pool, trains a navigator, and generates new drone landscapes from YOUR music.
+### Option 2: CLI
+
+```bash
+pip install numpy torch librosa scikit-learn soundfile
+python3 granular_field.py --bars 60 --multi-stream
+```
+
+### Option 3: Pre-trained Demo
+
+```bash
+# Download from HuggingFace and generate with pre-trained model
+python3 granular_field.py \
+  --pool granular_pool_v2_int16.npz \
+  --model granular_multi_v1.pt \
+  --bars 60 --multi-stream
+```
 
 ---
 
 ## How It Works
 
-1. **Scan** — finds all audio in your folders (MP3, FLAC, WAV, OGG, AAC)
-2. **Extract** — cuts every track into micro-grains (55ms–3s fragments), 22 spectral features per grain
-3. **Cluster** — groups grains into 1024 clusters
-4. **Train** — neural navigator learns to walk the grain field (6 parallel streams)
-5. **Generate** — assembles new sound from your grains
-
-Your music IS the instrument. Different library = different output. That's the point.
-
----
-
-## Try It First (Demo)
-
-Don't have your music ready? We trained a model on 2389 tracks and put it on HuggingFace so you can hear what it sounds like.
-
-```bash
-# Clone the repo
-git clone https://github.com/0penAGI/0MGE.git
-cd 0MGE
-pip install numpy torch librosa scikit-learn soundfile
-
-# Download granular_pool_v2_int16.npz (4.9 GB) and granular_multi_v1.pt (5.3 MB)
-# from https://huggingface.co/0penAGI/0MGE
-
-# Generate (model already trained, no --train-multi needed)
-python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt --bars 60 --multi-stream
+```
+your music → scan → extract grains → cluster → train navigator → generate new sound
 ```
 
-This generates from Slut Online's music. To generate from your own — just use the app.
+1. **Scan** — finds all audio (MP3, FLAC, WAV, OGG, AAC)
+2. **Extract** — cuts every track into micro-grains (55ms–3s), 22 spectral features per grain
+3. **Cluster** — groups grains into 1024 clusters
+4. **Train** — MultiNavigator Transformer learns to walk the grain field (6 parallel streams)
+5. **Generate** — assembles new stereo WAV from your grains
+
+Different music → different grain pool → different navigator → different output. Every library sounds unique.
 
 ---
 
 ## Components
 
-### Desktop App (`app.py`)
+### Desktop App
 
 ![Desktop App](app.png)
 
-PySide6 (Qt) desktop interface. The main way to use 0MGE — one window, one button, zero friction.
+PySide6 (Qt) desktop interface. The main way to use 0MGE.
 
-**What it does:**
-- Scans your music folders (Music, Downloads, Desktop, Ableton, external drives)
-- Extracts micro-grains from every track (55ms–3s fragments)
-- Builds a grain pool locally (~64MB lite cache)
-- Trains a MultiNavigator on your grains
-- Generates new stereo WAV files from your trained pool
-- Plays back results with built-in player
+- Auto-detects Music/Downloads/Ableton/external drives
+- Extracts micro-grains from every track
+- Builds grain pool locally (~64MB lite cache)
+- Trains MultiNavigator on your grains
+- Generates stereo WAV with built-in player
+- Settings persist between sessions
 
-**UI:**
-- Folder selector (auto-detects Music/Downloads/Ableton)
-- Bars, BPM, Temperature, Seed controls
-- Multi-stream toggle (6 frequency bands)
-- Train MultiNavigator checkbox
-- Real-time progress with spectral output preview
-- Generated files open in Finder/Explorer
-
-**Settings persist** in `app_settings.json` — remembers your folder, bars, BPM between sessions.
-
-```bash
-pip install PySide6 soundfile numpy
-python3 app.py
-```
-
-### Neural Engine (`granular_field.py`)
-
-CLI for the full pipeline: scan → extract → cluster → train → generate.
-
-```bash
-# Generate from your music (app does this automatically)
-python3 granular_field.py --bars 60 --multi-stream
-
-# Or use pre-trained demo pool
-python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt --bars 60 --multi-stream
-```
-
-### VST3/AU Plugin (`vst/`)
+### VST3/AU Plugin
 
 ![VST Plugin](vst.png)
 
 **Completely separate from the neural engine.** A real-time granular processor built with JUCE 8.0.6. No AI — pure DSP.
 
-Takes incoming audio from your DAW and chops it into grains in real time. Each grain is a tiny snapshot of the input signal, played back with its own pitch, position, direction, and spatial placement. The result: input audio is shredded and reassembled into evolving textures.
+Takes incoming audio from your DAW and chops it into grains in real time. Each grain is a tiny snapshot of the input signal, played back with its own pitch, position, direction, and spatial placement.
 
-**Grain engine:**
-- 32 persistent voices, COLA Hanning envelope (click-free)
-- Circular buffer (10s at 48kHz) stores incoming audio
-- Voices spawn at intervals determined by Density — each voice reads a random slice from the buffer
-- Grain size: 30–330ms (Size knob), with ±15% jitter per voice
-- Pitch: ±24 semitones, applied as playback rate
-- Stretch: slows down or speeds up grain read position (0.25×–4×)
-- Reverse: probability-based per grain (0–100%)
-- Scatter: random pitch variation per grain (±8% at max)
-- Spatial: pan ±0.5, Focus controls stereo spread (0.3–1.0×)
+**9 knobs:** Density, Pitch, Stretch, Reverse, Size, Scatter, Mix, Freeze, Focus
 
-**Freeze reverb:**
-- LP filter in feedback path (cutoff 2–8% of SR)
-- 12% L/R crossfeed in feedback loop
-- Creates evolving drones from any input signal
-- When freeze > 50%, feedback buffer holds the last sound indefinitely
+**Freeze reverb:** LP filter + 12% L/R crossfeed in feedback path. Creates evolving drones from any input.
 
-**9 knobs:**
-
-| Knob | Range | What it does |
-|------|-------|-------------|
-| Density | 0.1–6.0 | How many voices spawn per hop (1–4 voices) |
-| Pitch | ±24 st | Playback rate of grains |
-| Stretch | 0.25–4× | Time-stretch factor |
-| Reverse | 0–100% | Probability of grain playing backwards |
-| Size | 0–100% | Grain duration (30–330ms) |
-| Scatter | 0–100% | Random pitch variation per grain |
-| Mix | 0–100% | Dry/wet crossfade |
-| Freeze | 0–100% | Feedback amount (reverb/drone) |
-| Focus | 0–100% | Stereo spread (narrow ↔ wide) |
-
-**UI:** spectral visualization (8 bands), centroid display, real-time waveform, glassmorphism particles. Light theme.
+**32 voices**, COLA Hanning envelope (click-free), circular buffer (10s at 48kHz).
 
 ```bash
 cd vst && mkdir build && cd build
 cmake -G Xcode .. && cmake --build . --config Release
 ```
 
-### Genome Scanner (`genome_scan.py`)
+### Neural Engine
+
+```bash
+# From your music (app does this automatically)
+python3 granular_field.py --bars 60 --multi-stream
+
+# With pre-trained demo model
+python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt --bars 60 --multi-stream
+```
+
+### Genome Scanner
 
 Beat-aware audio collage generator. Cuts tracks into beat-aligned fragments, tempo-normalizes, pitch-matches, arranges into new tracks.
-
----
-
-## Downloads
-
-### Models (HuggingFace)
-
-Pre-trained on Slut Online's music (2389 tracks). For demo purposes.
-
-| File | Size | Description |
-|------|------|-------------|
-| [granular_multi_v1.pt](https://huggingface.co/0penAGI/0MGE) | 5.3 MB | 6-stream navigator |
-| [granular_multi_v1_int8.npz](https://huggingface.co/0penAGI/0MGE) | 1.4 MB | Navigator INT8 quantized (weights only, not the grain pool) |
-| [granular_pool_v2_int16.npz](https://huggingface.co/0penAGI/0MGE) | 4.9 GB | Full grain pool (566K grains) |
-| [granular_pool_lite.npz](https://huggingface.co/0penAGI/0MGE) | 64 MB | Lite pool (features only) |
-
-Your own trained files are much smaller — the app builds what you need locally.
-
-### VST3 / AU Plugin
-
-| Platform | Format | Install |
-|----------|--------|---------|
-| macOS | VST3 + AU (.pkg) | Double-click installer |
-| Windows | VST3 (.exe) | Run installer |
-
----
-
-## Demo
-
-| Sample | Duration | Description |
-|--------|----------|-------------|
-| [Landscape #1](samples/drone-01.mp3) | 16s | INT8 quantized |
-| [Landscape #2](samples/drone-02.mp3) | 32s | 6-stream generation |
-| [Full Pool Demo](samples/drone-03.mp3) | 60s | 566K grains |
-| [Quantized vs Original](samples/drone-04-int8.mp3) | 16s | Navigator INT8 (1.4MB) vs FP32 (5.3MB), same grain pool |
 
 ---
 
@@ -198,18 +135,82 @@ Your own trained files are much smaller — the app builds what you need locally
 | noise | 4–8 kHz | Detail |
 | air | 8–11 kHz | Upper spectrum |
 
+### Grain Pool
+
+Three-tier hierarchy (STFT, n_fft=1024, hop=256):
+
+| Level | Duration | Count |
+|-------|----------|-------|
+| Micro (μ) | ~55ms | 425K |
+| Meso (σ) | ~300ms | 118K |
+| Macro (Ω) | ~3s | 23K |
+| **Total** | — | **566K** |
+
+### Quantization
+
+INT8 navigator only (grain pool stays INT16):
+
+| Metric | FP32 | INT8 | Delta |
+|--------|------|------|-------|
+| Critic score | 0.292 | 0.285 | 0.008 |
+| File size | 5.3 MB | 1.4 MB | 3.9× |
+
+---
+
+## Downloads
+
+### Pre-trained Models ([HuggingFace](https://huggingface.co/0penAGI/0MGE))
+
+| File | Size | Description |
+|------|------|-------------|
+| `granular_multi_v1.pt` | 5.3 MB | 6-stream navigator |
+| `granular_multi_v1_int8.npz` | 1.4 MB | Navigator INT8 quantized |
+| `granular_pool_v2_int16.npz` | 4.9 GB | Full grain pool (566K grains) |
+| `granular_pool_lite.npz` | 64 MB | Lite pool (features only) |
+
+### Demo Audio
+
+| Sample | Duration | Description |
+|--------|----------|-------------|
+| [Landscape #1](samples/drone-01.mp3) | 16s | INT8 quantized |
+| [Landscape #2](samples/drone-02.mp3) | 32s | 6-stream generation |
+| [Full Pool Demo](samples/drone-03.mp3) | 60s | 566K grains |
+| [Quantized vs Original](samples/drone-04-int8.mp3) | 16s | INT8 vs FP32 comparison |
+
 ---
 
 ## Links
 
-- [Listen to Demo](https://0penagi.github.io/0MGE/) — audio-reactive player with GLSL shader
-- [GitHub](https://github.com/0penAGI/0MGE)
-- [HuggingFace](https://huggingface.co/0penAGI/0MGE)
+- **[Demo](https://0penagi.github.io/0MGE/)** — listen to generated audio
+- **[HuggingFace](https://huggingface.co/0penAGI/0MGE)** — download models and pool
+- **[Issues](https://github.com/0penAGI/0MGE/issues)** — report bugs, request features
 
 ---
 
-## Credits
+## Related Projects
 
-by **0penAGI**
+- [Magenta](https://magenta.tensorflow.org/) — Google's music generation research
+- [Meta's AudioCraft](https://github.com/facebookresearch/audiocraft) — audio generation with transformers
+- [DDSP](https://github.com/magenta/ddsp) — differentiable digital signal processing
+- [JUCE](https://juce.com/) — audio application framework (used for VST plugin)
 
-Neural engine trained on music by **Slut Online** with permission.
+---
+
+## Citation
+
+```bibtex
+@software{0mge2026,
+  title={0MGE: Neural Granular Engine},
+  author={0penAGI},
+  year={2026},
+  url={https://github.com/0penAGI/0MGE}
+}
+```
+
+## License
+
+MIT
+
+---
+
+**by [0penAGI](https://github.com/0penAGI)** · Neural engine trained on music by **Slut Online** with permission.
