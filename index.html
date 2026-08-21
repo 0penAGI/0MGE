@@ -48,22 +48,23 @@ h1{font-family:'Space Mono',monospace;font-size:clamp(3rem,8vw,5rem);font-weight
     <h1>0MGE</h1>
     <div class="sub">Neural Granular Engine</div>
     <p class="desc">
-      A new kind of audio neural network. <strong>Trains on your music library, on your computer.</strong>
-      Extracts micro-grains from any audio and learns to rebuild new sound worlds from them.
-      No cloud, no API, no subscription — just your machine and your music.
+      A new kind of audio neural network. <strong>It needs your music to work.</strong>
+      Scans your library, breaks every track into micro-grains, builds a pool,
+      then trains a navigator to generate new sound from those grains.
+      No library = no generation. Your music IS the training data.
     </p>
   </div>
   <div class="how">
     <div class="how-title">How it works</div>
     <div class="how-steps">
       <div class="step"><span class="step-num">01</span> scan your library</div>
-      <div class="step"><span class="step-num">02</span> extract grains</div>
+      <div class="step"><span class="step-num">02</span> build grain pool</div>
       <div class="step"><span class="step-num">03</span> train navigator</div>
-      <div class="step"><span class="step-num">04</span> generate</div>
+      <div class="step"><span class="step-num">04</span> generate from your grains</div>
     </div>
   </div>
   <div class="player">
-    <div class="player-title">Listen</div>
+    <div class="player-title">Demo — trained on Slut Online's 2389 tracks</div>
     <div class="track-list" id="trackList">
       <div class="track" data-src="samples/drone-01.mp3">
         <div class="play-btn">&#9654;</div>

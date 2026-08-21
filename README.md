@@ -1,24 +1,26 @@
 # 0MGE — Neural Granular Engine
 
-A new kind of audio neural network. **Trains on your music library, on your computer.**
+A new kind of audio neural network. **It needs your music to work.**
 
-No cloud. No API. No subscription. Just your machine and your music.
+0MGE doesn't generate sound from nothing. It scans your personal music library, breaks every track into micro-grains (tiny fragments of sound), builds a grain pool, then trains a neural navigator to walk through that pool and generate new sound worlds.
 
-0MGE scans your audio library, extracts micro-grains (tiny fragments of sound), and learns to rebuild new sonic worlds from them. The result is not a remix — it's a new species of sound: evolving textures, alien landscapes, impossible instruments that never existed.
+**No library = no generation.** The grain pool IS the instrument. Your music IS the training data.
 
 ---
 
-## How It Works
+## What Actually Happens
 
 ```
-your music → extract grains → train navigator → generate new sound
+your music → grain pool → train navigator → generate
 ```
 
 1. **Scan** — recursively finds all audio in your library (MP3, FLAC, WAV, OGG, AAC)
 2. **Extract** — STFT → 22-dim spectral features, three-tier hierarchy (micro/meso/macro)
-3. **Cluster** — MiniBatchKMeans, 1024 clusters across all grains
-4. **Train** — MultiNavigator learns to walk the grain field (6 parallel streams)
-5. **Generate** — multi-stream synthesis with spectral critics
+3. **Build pool** — millions of grains indexed and clustered (MiniBatchKMeans, 1024 clusters)
+4. **Train** — MultiNavigator learns to walk your grain field (6 parallel streams)
+5. **Generate** — the navigator picks grains from YOUR pool and assembles new sound
+
+Each grain comes from your tracks. The neural network doesn't invent timbres — it recombines fragments of what you gave it into something new. Better source library = richer output.
 
 ---
 
@@ -36,13 +38,28 @@ Creates venv, installs deps, opens the desktop app.
 
 ---
 
-## Demo
+## What You Need
+
+| Component | Required? | Notes |
+|-----------|-----------|-------|
+| Your music library | **Yes** | MP3, FLAC, WAV, OGG, AAC — the more the better |
+| Python 3.9+ | Yes | With numpy, torch, librosa, scikit-learn |
+| Grain pool | Built automatically | From YOUR library during scan |
+| Navigator model | Trained automatically | After pool is built |
+| ~2GB RAM | Yes | For extraction, more for large libraries |
+| GPU optional | No | CPU works, GPU is faster |
+
+---
+
+## Pre-built Demo (What It Sounds Like)
+
+These were generated from Slut Online's music (2389 tracks). Your results will sound different — that's the point.
 
 | Sample | Duration | Description |
 |--------|----------|-------------|
-| [Landscape #1](samples/drone-01.mp3) | 16s | INT8 quantized model, trained on 2389 tracks |
+| [Landscape #1](samples/drone-01.mp3) | 16s | INT8 quantized model |
 | [Landscape #2](samples/drone-02.mp3) | 32s | 6-stream multi-generation |
-| [Full Pool Demo](samples/drone-03.mp3) | 60s | 566K grains, full grain pool |
+| [Full Pool Demo](samples/drone-03.mp3) | 60s | 566K grains from Slut Online's library |
 | [Quantized vs Original](samples/drone-04-int8.mp3) | 16s | 3.9x compression, same quality |
 
 ---
@@ -51,10 +68,12 @@ Creates venv, installs deps, opens the desktop app.
 
 ### Models (HuggingFace)
 
+Pre-trained on Slut Online's music. **These will NOT work with your grain pool** — you need to train your own.
+
 | File | Size | Description |
 |------|------|-------------|
-| [granular_multi_v1_int8.npz](https://huggingface.co/0penAGI/0MGE) | 1.4 MB | **Recommended** — INT8 quantized 6-stream navigator |
-| [granular_multi_v1.pt](https://huggingface.co/0penAGI/0MGE) | 5.3 MB | FP32 6-stream navigator |
+| [granular_multi_v1_int8.npz](https://huggingface.co/0penAGI/0MGE) | 1.4 MB | INT8 quantized 6-stream navigator (Slut Online's pool) |
+| [granular_multi_v1.pt](https://huggingface.co/0penAGI/0MGE) | 5.3 MB | FP32 6-stream navigator (Slut Online's pool) |
 | [granular_pool_v2_int16.npz](https://huggingface.co/0penAGI/0MGE) | 4.9 GB | Full grain pool with raw audio (INT16) |
 | [granular_pool_lite.npz](https://huggingface.co/0penAGI/0MGE) | 64 MB | Lite pool (features only, no raw audio) |
 
@@ -147,17 +166,17 @@ pyinstaller --onefile --windowed --name 0MGE \
 ## CLI
 
 ```bash
+# Scan library and build grain pool
+python3 granular_field.py --scan /path/to/music
+
+# Train navigator on your pool
+python3 granular_field.py --train-multi
+
 # Generate 60 bars, multi-stream
 python3 granular_field.py --bars 60 --multi-stream --seed 42
 
 # With closed-loop critic
 python3 granular_field.py --bars 60 --multi-stream --closed-loop 8
-
-# Train multi-stream navigator
-python3 granular_field.py --train-multi
-
-# Rebuild pool with full audio
-python3 granular_field.py --full-pool --train-multi
 ```
 
 ---
