@@ -159,7 +159,7 @@ Pre-trained on Slut Online's music (2389 tracks). For demo purposes.
 | File | Size | Description |
 |------|------|-------------|
 | [granular_multi_v1.pt](https://huggingface.co/0penAGI/0MGE) | 5.3 MB | 6-stream navigator |
-| [granular_multi_v1_int8.npz](https://huggingface.co/0penAGI/0MGE) | 1.4 MB | INT8 quantized (3.9× smaller) |
+| [granular_multi_v1_int8.npz](https://huggingface.co/0penAGI/0MGE) | 1.4 MB | Navigator INT8 quantized (weights only, not the grain pool) |
 | [granular_pool_v2_int16.npz](https://huggingface.co/0penAGI/0MGE) | 4.9 GB | Full grain pool (566K grains) |
 | [granular_pool_lite.npz](https://huggingface.co/0penAGI/0MGE) | 64 MB | Lite pool (features only) |
 
@@ -181,7 +181,7 @@ Your own trained files are much smaller — the app builds what you need locally
 | [Landscape #1](samples/drone-01.mp3) | 16s | INT8 quantized |
 | [Landscape #2](samples/drone-02.mp3) | 32s | 6-stream generation |
 | [Full Pool Demo](samples/drone-03.mp3) | 60s | 566K grains |
-| [Quantized vs Original](samples/drone-04-int8.mp3) | 16s | Compression comparison |
+| [Quantized vs Original](samples/drone-04-int8.mp3) | 16s | Navigator INT8 (1.4MB) vs FP32 (5.3MB), same grain pool |
 
 ---
 
