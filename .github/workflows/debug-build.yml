@@ -1,0 +1,42 @@
+name: Debug Build
+
+on: workflow_dispatch:
+
+jobs:
+  debug-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test cmake
+        working-directory: vst
+        run: |
+          echo "=== cmake version ==="
+          cmake --version
+          echo "=== xcode version ==="
+          xcodebuild -version
+          echo "=== try configure ==="
+          cmake -B build-test -DCMAKE_BUILD_TYPE=Release 2>&1 || true
+          echo "=== check if JUCE fetched ==="
+          ls -la build-test/_deps/ 2>/dev/null || echo "no _deps"
+      - name: Build with verbose
+        working-directory: vst
+        run: |
+          cmake --build build-test --verbose 2>&1 | tail -50 || true
+
+  debug-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test cmake
+        shell: cmd
+        working-directory: vst
+        run: |
+          cmake --version
+          cmake -B build-test 2>&1
+          if %ERRORLEVEL% neq 0 echo "CMAKE CONFIGURE FAILED"
+      - name: Build with verbose
+        shell: cmd
+        working-directory: vst
+        run: |
+          cmake --build build-test --config Release -- /v:minimal 2>&1
+          if %ERRORLEVEL% neq 0 echo "CMAKE BUILD FAILED"
