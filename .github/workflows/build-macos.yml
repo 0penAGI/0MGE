@@ -7,36 +7,45 @@ on:
 
 jobs:
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Show environment
+        run: |
+          xcodebuild -version
+          cmake --version
+          sw_vers
 
       - name: Build plugin
         run: |
           cd vst
           mkdir -p build-macos
           cd build-macos
-          cmake .. -G Xcode -DCMAKE_BUILD_TYPE=Release
-          cmake --build . --config Release
+          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake --build . --config Release -j4
+
+      - name: List build output
+        run: find vst/build-macos -name "*.vst3" -o -name "*.component" -o -name "0MGE" 2>/dev/null
 
       - name: Create .pkg installer
         run: |
-          sed -i '' 's|vst/build/ZeroMGE_Project_artefacts/Release|vst/build-macos/Release|' installers/macos/build_pkg.sh
+          sed -i '' 's|vst/build/ZeroMGE_Project_artefacts/Release|vst/build-macos|' installers/macos/build_pkg.sh
           bash installers/macos/build_pkg.sh
 
       - name: Upload plugin
         uses: actions/upload-artifact@v4
         with:
           name: 0MGE-macos-vst3
-          path: vst/build-macos/Release/VST3/0MGE.vst3
+          path: vst/build-macos/VST3/0MGE.vst3
 
       - name: Upload AU
         uses: actions/upload-artifact@v4
         with:
           name: 0MGE-macos-au
-          path: vst/build-macos/Release/AU/0MGE.component
+          path: vst/build-macos/AU/0MGE.component
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
@@ -50,6 +59,6 @@ jobs:
         with:
           files: |
             release/macos/*.pkg
-            vst/build-macos/Release/VST3/0MGE.vst3
-            vst/build-macos/Release/AU/0MGE.component
+            vst/build-macos/VST3/0MGE.vst3
+            vst/build-macos/AU/0MGE.component
           generate_release_notes: true
