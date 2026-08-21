@@ -1,19 +1,24 @@
-# 0MGE — 0penAGI Music Granular Engine
+# 0MGE — Neural Granular Engine
 
-**Drone sound landscape generator** — not a classic music generator.
+A new kind of audio neural network. **Trains on your music library, on your computer.**
 
-0MGE transforms your music into evolving soundscapes, textures, and atmospheres. Feed it any audio and it breaks it into micro-grains, then rebuilds new sonic worlds using a neural navigator. Perfect for **sound design, horror games, film scores, and experimental audio**.
+No cloud. No API. No subscription. Just your machine and your music.
 
-The neural engine was trained on music by **Slut Online** (with permission).
+0MGE scans your audio library, extracts micro-grains (tiny fragments of sound), and learns to rebuild new sonic worlds from them. The result is not a remix — it's a new species of sound: evolving textures, alien landscapes, impossible instruments that never existed.
 
 ---
 
-## Demo
+## How It Works
 
-| Sample | Duration | Description |
-|--------|----------|-------------|
-| [INT8 Test](samples/granular_int8_test.wav) | 32s | Drone landscape from quantized model |
-| [Big Pool Demo](samples/granular_bigpool_demo.wav) | 60s | Multi-stream generation from full grain pool |
+```
+your music → extract grains → train navigator → generate new sound
+```
+
+1. **Scan** — recursively finds all audio in your library (MP3, FLAC, WAV, OGG, AAC)
+2. **Extract** — STFT → 22-dim spectral features, three-tier hierarchy (micro/meso/macro)
+3. **Cluster** — MiniBatchKMeans, 1024 clusters across all grains
+4. **Train** — MultiNavigator learns to walk the grain field (6 parallel streams)
+5. **Generate** — multi-stream synthesis with spectral critics
 
 ---
 
@@ -31,21 +36,18 @@ Creates venv, installs deps, opens the desktop app.
 
 ---
 
+## Demo
+
+| Sample | Duration | Description |
+|--------|----------|-------------|
+| [Landscape #1](samples/drone-01.mp3) | 16s | INT8 quantized model, trained on 2389 tracks |
+| [Landscape #2](samples/drone-02.mp3) | 32s | 6-stream multi-generation |
+| [Full Pool Demo](samples/drone-03.mp3) | 60s | 566K grains, full grain pool |
+| [Quantized vs Original](samples/drone-04-int8.mp3) | 16s | 3.9x compression, same quality |
+
+---
+
 ## Downloads
-
-### VST3 / AU Plugin
-
-| Platform | Format | Install |
-|----------|--------|---------|
-| macOS | VST3 + AU (.pkg) | Double-click installer |
-| Windows | VST3 (.exe) | Run installer |
-
-### Standalone App (Python + Neural Engine)
-
-| Platform | Format | Install |
-|----------|--------|---------|
-| macOS | .app (PyInstaller) | Drag to Applications |
-| Windows | .exe (PyInstaller) | Run installer |
 
 ### Models (HuggingFace)
 
@@ -56,11 +58,25 @@ Creates venv, installs deps, opens the desktop app.
 | [granular_pool_v2_int16.npz](https://huggingface.co/0penAGI/0MGE) | 4.9 GB | Full grain pool with raw audio (INT16) |
 | [granular_pool_lite.npz](https://huggingface.co/0penAGI/0MGE) | 64 MB | Lite pool (features only, no raw audio) |
 
+### VST3 / AU Plugin
+
+| Platform | Format | Install |
+|----------|--------|---------|
+| macOS | VST3 + AU (.pkg) | Double-click installer |
+| Windows | VST3 (.exe) | Run installer |
+
+### Standalone App
+
+| Platform | Format | Install |
+|----------|--------|---------|
+| macOS | .app (PyInstaller) | Drag to Applications |
+| Windows | .exe (PyInstaller) | Run installer |
+
 ---
 
 ## Components
 
-### 1. Python Engine (`granular_field.py`)
+### Python Engine (`granular_field.py`)
 
 Core engine (~1430 lines). Three-tier grain hierarchy:
 
@@ -69,13 +85,6 @@ Core engine (~1430 lines). Three-tier grain hierarchy:
 | **Micro** (μ) | 5 STFT frames | ~55ms | 300 |
 | **Meso** (σ) | 26 STFT frames | ~300ms | 100 |
 | **Macro** (Ω) | 259 STFT frames | ~3s | 30 |
-
-**Pipeline:**
-1. **Scan** — recursive walk of Music/Ableton/etc folders, dedup by MD5
-2. **Extract** — STFT → 22-dim spectral features per grain
-3. **Cluster** — MiniBatchKMeans, 1024 clusters across all grains
-4. **Train** — MultiNavigator learns to walk the grain field (6 streams)
-5. **Generate** — multi-stream synthesis with spectral critics
 
 **6-Stream Architecture:**
 
@@ -88,15 +97,15 @@ Core engine (~1430 lines). Three-tier grain hierarchy:
 | noise | 4–8 kHz | Brightness |
 | air | 8–11 kHz | Top shimmer |
 
-### 2. Desktop App (`app.py`)
+### Desktop App (`app.py`)
 
 PySide6 (Qt) desktop UI — one button, one result.
 
-### 3. Genome Scanner (`genome_scan.py`)
+### Genome Scanner (`genome_scan.py`)
 
 Beat-aware audio collage generator with tempo normalization, harmonic matching, and click-free transitions.
 
-### 4. VST3/AU Plugin (`vst/`)
+### VST3/AU Plugin (`vst/`)
 
 Real-time granular processing plugin built with JUCE 8.0.6.
 
@@ -153,14 +162,15 @@ python3 granular_field.py --full-pool --train-multi
 
 ---
 
-## HuggingFace
+## Links
 
-Models, quantized weights, and audio samples: [0penAGI/0MGE on HuggingFace](https://huggingface.co/0penAGI/0MGE)
+- [GitHub](https://github.com/0penAGI/0MGE)
+- [HuggingFace](https://huggingface.co/0penAGI/0MGE)
 
 ---
 
 ## Credits
 
-by **0penAGI** x TeMeT x Slut Online
+by **0penAGI**
 
 Neural engine trained on music by **Slut Online** with permission.

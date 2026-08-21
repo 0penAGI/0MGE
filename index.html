@@ -3,38 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>0MGE — Drone Sound Landscape Generator</title>
+<title>0MGE — Neural Granular Engine</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap');
-body{background:#0a0a0a;color:#e8e8e8;font-family:'Inter',sans-serif;overflow-x:hidden}
-canvas#bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0}
+body{background:#f8f8f6;color:#111;font-family:'Inter',sans-serif;overflow-x:hidden}
+canvas#bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;opacity:0.6}
 .overlay{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem}
-.hero{text-align:center;margin-bottom:3rem}
-h1{font-family:'Space Mono',monospace;font-size:clamp(3rem,8vw,6rem);font-weight:700;letter-spacing:-0.02em;line-height:1;margin-bottom:0.5rem;background:linear-gradient(135deg,#fff 0%,#888 50%,#fff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.sub{font-family:'Space Mono',monospace;font-size:clamp(0.7rem,1.5vw,0.9rem);letter-spacing:0.3em;text-transform:uppercase;color:#666;margin-bottom:2rem}
-.desc{max-width:600px;font-size:1rem;line-height:1.8;color:#999;margin:0 auto 3rem}
-.desc em{color:#ccc;font-style:normal}
+.hero{text-align:center;margin-bottom:2.5rem}
+h1{font-family:'Space Mono',monospace;font-size:clamp(3rem,8vw,5rem);font-weight:700;letter-spacing:-0.02em;line-height:1;margin-bottom:0.3rem;color:#111}
+.sub{font-family:'Space Mono',monospace;font-size:clamp(0.65rem,1.3vw,0.8rem);letter-spacing:0.25em;text-transform:uppercase;color:#888;margin-bottom:1.5rem}
+.desc{max-width:580px;font-size:0.95rem;line-height:1.9;color:#666;margin:0 auto 2.5rem}
+.desc strong{color:#111;font-weight:600}
+.how{max-width:580px;margin:0 auto 3rem;text-align:center}
+.how-title{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#aaa;margin-bottom:1rem}
+.how-steps{display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap}
+.step{font-family:'Space Mono',monospace;font-size:0.7rem;padding:0.5rem 1rem;border:1px solid #ddd;color:#555;background:#fff}
+.step-num{color:#bbb;margin-right:0.3rem}
 .player{width:min(600px,90vw);margin:0 auto}
-.player-title{font-family:'Space Mono',monospace;font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:#555;margin-bottom:1rem;text-align:center}
-.track-list{display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.5rem}
-.track{display:flex;align-items:center;gap:1rem;padding:0.8rem 1.2rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:0;cursor:pointer;transition:all 0.3s}
-.track:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.12)}
-.track.active{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}
-.play-btn{width:32px;height:32px;border:1px solid #444;border-radius:0;display:flex;align-items:center;justify-content:center;background:transparent;color:#888;font-size:0.7rem;flex-shrink:0;transition:all 0.3s}
-.track.active .play-btn{border-color:#fff;color:#fff}
+.player-title{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:#aaa;margin-bottom:1rem;text-align:center}
+.track-list{display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1.5rem}
+.track{display:flex;align-items:center;gap:1rem;padding:0.7rem 1rem;background:#fff;border:1px solid #eee;cursor:pointer;transition:all 0.2s}
+.track:hover{border-color:#ccc;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.track.active{border-color:#111;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+.play-btn{width:28px;height:28px;border:1px solid #ddd;border-radius:0;display:flex;align-items:center;justify-content:center;background:transparent;color:#999;font-size:0.6rem;flex-shrink:0;transition:all 0.2s}
+.track.active .play-btn{border-color:#111;color:#111}
 .track-info{flex:1}
-.track-name{font-family:'Space Mono',monospace;font-size:0.8rem;color:#ccc}
-.track-meta{font-size:0.7rem;color:#555;margin-top:0.2rem}
-.waveform{height:24px;flex:0 0 80px;opacity:0.4}
-.progress-bar{width:100%;height:2px;background:rgba(255,255,255,0.06);position:relative;margin-top:1rem;cursor:pointer}
-.progress-fill{height:100%;background:#fff;width:0%;transition:width 0.1s linear}
-.time-display{font-family:'Space Mono',monospace;font-size:0.65rem;color:#444;margin-top:0.5rem;text-align:right}
-.links{display:flex;gap:1.5rem;margin-top:3rem;justify-content:center}
-.link{font-family:'Space Mono',monospace;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;color:#555;text-decoration:none;padding:0.6rem 1.5rem;border:1px solid rgba(255,255,255,0.1);transition:all 0.3s}
-.link:hover{color:#fff;border-color:rgba(255,255,255,0.3)}
-.badge{display:inline-block;font-size:0.6rem;padding:0.2rem 0.5rem;border:1px solid rgba(255,255,255,0.1);color:#555;margin-left:0.5rem;vertical-align:middle}
-.footer{position:fixed;bottom:0;left:0;right:0;padding:1rem 2rem;text-align:center;font-size:0.6rem;color:#333;z-index:1;font-family:'Space Mono',monospace;letter-spacing:0.15em}
+.track-name{font-family:'Space Mono',monospace;font-size:0.75rem;color:#333}
+.track-meta{font-size:0.65rem;color:#aaa;margin-top:0.15rem}
+.badge{display:inline-block;font-size:0.55rem;padding:0.15rem 0.4rem;border:1px solid #ddd;color:#999;margin-left:0.4rem;vertical-align:middle}
+.progress-bar{width:100%;height:1px;background:#eee;position:relative;cursor:pointer}
+.progress-fill{height:100%;background:#111;width:0%;transition:width 0.1s linear}
+.time-display{font-family:'Space Mono',monospace;font-size:0.6rem;color:#bbb;margin-top:0.4rem;text-align:right}
+.links{display:flex;gap:1rem;margin-top:2.5rem;justify-content:center}
+.link{font-family:'Space Mono',monospace;font-size:0.65rem;letter-spacing:0.08em;text-transform:uppercase;color:#999;text-decoration:none;padding:0.5rem 1.2rem;border:1px solid #eee;transition:all 0.2s;background:#fff}
+.link:hover{color:#111;border-color:#111}
+.footer{position:fixed;bottom:0;left:0;right:0;padding:0.8rem 2rem;text-align:center;font-size:0.55rem;color:#ccc;z-index:1;font-family:'Space Mono',monospace;letter-spacing:0.12em}
 </style>
 </head>
 <body>
@@ -42,42 +46,51 @@ h1{font-family:'Space Mono',monospace;font-size:clamp(3rem,8vw,6rem);font-weight
 <div class="overlay">
   <div class="hero">
     <h1>0MGE</h1>
-    <div class="sub">Drone Sound Landscape Generator</div>
+    <div class="sub">Neural Granular Engine</div>
     <p class="desc">
-      Transforms music into <em>evolving soundscapes</em>, textures, and atmospheres.
-      Trained on <em>Slut Online</em>'s music. Built for sound design,
-      horror games, and experimental audio.
+      A new kind of audio neural network. <strong>Trains on your music library, on your computer.</strong>
+      Extracts micro-grains from any audio and learns to rebuild new sound worlds from them.
+      No cloud, no API, no subscription — just your machine and your music.
     </p>
   </div>
+  <div class="how">
+    <div class="how-title">How it works</div>
+    <div class="how-steps">
+      <div class="step"><span class="step-num">01</span> scan your library</div>
+      <div class="step"><span class="step-num">02</span> extract grains</div>
+      <div class="step"><span class="step-num">03</span> train navigator</div>
+      <div class="step"><span class="step-num">04</span> generate</div>
+    </div>
+  </div>
   <div class="player">
-    <div class="player-title">Generations</div>
+    <div class="player-title">Listen</div>
     <div class="track-list" id="trackList">
       <div class="track" data-src="samples/drone-01.mp3">
-        <div class="play-btn">▶</div>
+        <div class="play-btn">&#9654;</div>
         <div class="track-info">
-          <div class="track-name">Drone Landscape #1 <span class="badge">INT8</span></div>
-          <div class="track-meta">4 bars · 16s · quantized model</div>
+          <div class="track-name">Landscape #1 <span class="badge">INT8 quantized</span></div>
+          <div class="track-meta">16s · trained on 2389 tracks</div>
         </div>
       </div>
       <div class="track" data-src="samples/drone-02.mp3">
-        <div class="play-btn">▶</div>
+        <div class="play-btn">&#9654;</div>
         <div class="track-info">
-          <div class="track-name">Drone Landscape #2</div>
-          <div class="track-meta">16 bars · 32s · 6-stream multi</div>
+          <div class="track-name">Landscape #2 <span class="badge">6-stream</span></div>
+          <div class="track-meta">32s · sub / drums / harmonic / texture / noise / air</div>
         </div>
       </div>
       <div class="track" data-src="samples/drone-03.mp3">
-        <div class="play-btn">▶</div>
+        <div class="play-btn">&#9654;</div>
         <div class="track-info">
-          <div class="track-name">Big Pool Demo <span class="badge">60s</span></div>
-          <div class="track-meta">16 bars · 60s · full grain pool (566K grains)</div>
+          <div class="track-name">Full Pool Demo <span class="badge">60s</span></div>
+          <div class="track-meta">566K grains · full grain pool</div>
         </div>
       </div>
       <div class="track" data-src="samples/drone-04-int8.mp3">
-        <div class="play-btn">▶</div>
+        <div class="play-btn">&#9654;</div>
         <div class="track-info">
-          <div class="track-name">INT8 vs FP32 <span class="badge">1.4 MB</span></div>
-          <div class="track-meta">16s · 3.9x compression, identical quality</div>
+          <div class="track-name">Quantized vs Original <span class="badge">1.4 MB</span></div>
+          <div class="track-meta">3.9x smaller, same quality</div>
         </div>
       </div>
     </div>
@@ -88,205 +101,110 @@ h1{font-family:'Space Mono',monospace;font-size:clamp(3rem,8vw,6rem);font-weight
   </div>
   <div class="links">
     <a href="https://github.com/0penAGI/0MGE" class="link" target="_blank">GitHub</a>
-    <a href="https://huggingface.co/0penAGI/0MGE" class="link" target="_blank">HuggingFace</a>
-    <a href="https://github.com/0penAGI/0MGE#downloads" class="link" target="_blank">Downloads</a>
+    <a href="https://huggingface.co/0penAGI/0MGE" class="link" target="_blank">Models</a>
+    <a href="https://github.com/0penAGI/0MGE#downloads" class="link" target="_blank">Install</a>
   </div>
 </div>
-<div class="footer">by 0penAGI × Slut Online</div>
+<div class="footer">0penAGI</div>
 
 <script>
-// === AUDIO ENGINE ===
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const analyser = audioCtx.createAnalyser();
 analyser.fftSize = 512;
 analyser.smoothingTimeConstant = 0.82;
 const freqData = new Uint8Array(analyser.frequencyBinCount);
-const timeData = new Uint8Array(analyser.fftSize);
-let audio = null;
-let currentTrack = null;
+let audio = null, currentTrack = null;
 
 function playTrack(el) {
   const src = el.dataset.src;
   if (currentTrack === el && audio && !audio.paused) {
-    audio.pause();
-    el.classList.remove('active');
-    el.querySelector('.play-btn').textContent = '▶';
-    return;
+    audio.pause(); el.classList.remove('active');
+    el.querySelector('.play-btn').innerHTML = '&#9654;'; return;
   }
   document.querySelectorAll('.track').forEach(t => {
-    t.classList.remove('active');
-    t.querySelector('.play-btn').textContent = '▶';
+    t.classList.remove('active'); t.querySelector('.play-btn').innerHTML = '&#9654;';
   });
   if (audio) { audio.pause(); audio = null; }
   audio = new Audio(src);
   audio.crossOrigin = 'anonymous';
-  const src_node = audioCtx.createMediaElementSource(audio);
-  src_node.connect(analyser);
+  audioCtx.createMediaElementSource(audio).connect(analyser);
   analyser.connect(audioCtx.destination);
-  audio.play();
-  el.classList.add('active');
-  el.querySelector('.play-btn').textContent = '⏸';
+  audio.play(); el.classList.add('active');
+  el.querySelector('.play-btn').innerHTML = '&#9646;&#9646;';
   currentTrack = el;
   audio.ontimeupdate = () => {
-    const pct = (audio.currentTime / audio.duration) * 100;
-    document.getElementById('progressFill').style.width = pct + '%';
-    const cur = fmt(audio.currentTime);
-    const dur = fmt(audio.duration || 0);
-    document.getElementById('timeDisplay').textContent = cur + ' / ' + dur;
+    document.getElementById('progressFill').style.width = (audio.currentTime / audio.duration * 100) + '%';
+    document.getElementById('timeDisplay').textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration || 0);
   };
   audio.onended = () => {
-    el.classList.remove('active');
-    el.querySelector('.play-btn').textContent = '▶';
+    el.classList.remove('active'); el.querySelector('.play-btn').innerHTML = '&#9654;';
     currentTrack = null;
   };
 }
+function fmt(s) { return Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0'); }
+document.querySelectorAll('.track').forEach(t => t.addEventListener('click', () => playTrack(t)));
 
-function fmt(s) {
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return m + ':' + String(sec).padStart(2, '0');
-}
-
-document.querySelectorAll('.track').forEach(t => {
-  t.addEventListener('click', () => playTrack(t));
-});
-
-// === GLSL SHADER ===
+// GLSL — light theme raymarcher
 const canvas = document.getElementById('bg');
 const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-if (!gl) { canvas.style.background = '#0a0a0a'; }
+if (!gl) canvas.style.background = '#f8f8f6';
 
 function resize() {
-  const dpr = Math.min(window.devicePixelRatio, 2);
-  canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
-  canvas.style.width = window.innerWidth + 'px';
-  canvas.style.height = window.innerHeight + 'px';
+  const d = Math.min(window.devicePixelRatio, 1.5);
+  canvas.width = innerWidth * d; canvas.height = innerHeight * d;
+  canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
   if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
 }
-resize();
-window.addEventListener('resize', resize);
+resize(); addEventListener('resize', resize);
 
-const vsSource = `attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
-const fsSource = `
+const vs = `attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
+const fs = `
 precision mediump float;
-uniform float uTime;
-uniform vec2 uRes;
-uniform float uFreqs[8];
-uniform float uEnergy;
-
-vec3 palette(float t){
-  vec3 a=vec3(0.5,0.5,0.5);
-  vec3 b=vec3(0.5,0.5,0.5);
-  vec3 c=vec3(1.0,1.0,1.0);
-  vec3 d=vec3(0.263,0.416,0.557);
-  return a+b*cos(6.28318*(c*t+d));
-}
-
-float sdSphere(vec3 p,float r){return length(p)-r;}
-float sdTorus(vec3 p,vec2 t){vec2 q=vec2(length(p.xz)-t.x,p.y);return length(q)-t.y;}
-
+uniform float T;uniform vec2 R;uniform float F[8];uniform float E;
+float sdS(vec3 p,float r){return length(p)-r;}
+float sdT(vec3 p,vec2 t){vec2 q=vec2(length(p.xz)-t.x,p.y);return length(q)-t.y;}
 void main(){
-  vec2 uv=(gl_FragCoord.xy-0.5*uRes)/min(uRes.x,uRes.y);
-  float t=uTime*0.15;
-  float bass=uFreqs[0]*0.012;
-  float mid=uFreqs[3]*0.01;
-  float high=uFreqs[6]*0.008;
-  float energy=uEnergy*0.015;
-  
-  vec3 ro=vec3(0,0,-3.0+energy*2.0);
-  vec3 rd=normalize(vec3(uv,1.5));
-  
-  float d=1e10;
-  vec3 p;
-  for(int i=0;i<60;i++){
+  vec2 uv=(gl_FragCoord.xy-0.5*R)/min(R.x,R.y);
+  float t=T*0.12;
+  float b=F[0]*.01,m=F[3]*.008,h=F[6]*.006,e=E*.012;
+  vec3 ro=vec3(0,0,-3.+e*1.5);vec3 rd=normalize(vec3(uv,1.5));
+  float d=1e10;vec3 p;
+  for(int i=0;i<50;i++){
     p=ro+rd*d;
-    float s1=sdSphere(p-vec3(sin(t*0.7)*1.5,cos(t*0.5)*0.8+bass*0.3,0),0.5+high*0.3);
-    float s2=sdTorus(p-vec3(cos(t*0.3)*0.8,sin(t*0.9)*0.5,1.0+bass*0.5),vec2(0.6+mid*0.2,0.15));
-    float s3=sdSphere(p-vec3(sin(t*1.1)*0.4,cos(t*0.7)*1.2,0.5),0.3+energy*0.4);
-    float s4=sdSphere(p+vec3(sin(t*0.4)*2.0,0,cos(t*0.6)*1.5),0.2+high*0.2);
-    float m=min(min(s1,s2),min(s3,s4));
-    d+=m*0.8;
-    if(d>15.0||m<0.001)break;
+    float s1=sdS(p-vec3(sin(t*.7)*1.5,cos(t*.5)*.8+b*.3,0),.5+h*.3);
+    float s2=sdT(p-vec3(cos(t*.3)*.8,sin(t*.9)*.5,1.+b*.5),vec2(.6+m*.2,.15));
+    float s3=sdS(p-vec3(sin(t*1.1)*.4,cos(t*.7)*1.2,.5),.3+e*.4);
+    float s4=sdS(p+vec3(sin(t*.4)*2.,0,cos(t*.6)*1.5),.2+h*.2);
+    float q=min(min(s1,s2),min(s3,s4));d+=q*.8;
+    if(d>15.||q<.001)break;
   }
-  
-  vec3 col=vec3(0.0);
-  if(d<15.0){
-    vec3 n=normalize(p);
-    float light=dot(n,normalize(vec3(1,1,-1)))*0.5+0.5;
-    vec3 pal=palette(length(p)*0.3+t*0.5);
-    col=pal*light*0.4;
-    col+=vec3(1.0)*exp(-d*0.15)*0.15;
-    float rim=1.0-max(dot(-rd,n),0.0);
-    col+=rim*rim*vec3(0.3,0.4,0.6)*0.3;
+  vec3 c=vec3(.97,.96,.94);
+  if(d<15.){
+    vec3 n=normalize(p);float l=dot(n,normalize(vec3(1,1,-1)))*.5+.5;
+    float rim=1.-max(dot(-rd,n),0.);
+    vec3 warm=vec3(.95,.90,.82);vec3 cool=vec3(.85,.88,.93);
+    vec3 col=mix(cool,warm,l);
+    col+=rim*rim*.15;
+    col*=.92;
+    c=col;
   }
-  
-  float grain=fract(sin(dot(gl_FragCoord.xy+uTime,vec2(12.9898,78.233)))*43758.5453);
-  col+=grain*0.02;
-  
-  col=pow(col,vec3(0.85));
-  col*=1.0-0.4*length(uv);
-  
-  gl_FragColor=vec4(col,1);
+  float grain=fract(sin(dot(gl_FragCoord.xy+T,vec2(12.9898,78.233)))*43758.5453);
+  c+=grain*.015;
+  gl_FragColor=vec4(c,1);
 }`;
 
-function createShader(type, source) {
-  const s = gl.createShader(type);
-  gl.shaderSource(s, source);
-  gl.compileShader(s);
-  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-    console.error(gl.getShaderInfoLog(s));
-    gl.deleteShader(s);
-    return null;
-  }
-  return s;
-}
-
-const vs = createShader(gl.VERTEX_SHADER, vsSource);
-const fs = createShader(gl.FRAGMENT_SHADER, fsSource);
-const prog = gl.createProgram();
-gl.attachShader(prog, vs);
-gl.attachShader(prog, fs);
-gl.linkProgram(prog);
-gl.useProgram(prog);
-
-const buf = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
-const pLoc = gl.getAttribLocation(prog, 'p');
-gl.enableVertexAttribArray(pLoc);
-gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
-
-const uTime = gl.getUniformLocation(prog, 'uTime');
-const uRes = gl.getUniformLocation(prog, 'uRes');
-const uFreqs = [];
-for (let i = 0; i < 8; i++) uFreqs.push(gl.getUniformLocation(prog, 'uFreqs[' + i + ']'));
-const uEnergy = gl.getUniformLocation(prog, 'uEnergy');
-
-let startTime = Date.now();
-function render() {
-  requestAnimationFrame(render);
-  if (analyser) {
-    analyser.getByteFrequencyData(freqData);
-    analyser.getByteTimeDomainData(timeData);
-  }
-  const t = (Date.now() - startTime) / 1000;
-  gl.uniform1f(uTime, t);
-  gl.uniform2f(uRes, canvas.width, canvas.height);
-  
-  let energy = 0;
-  for (let i = 0; i < 8; i++) {
-    const idx = Math.floor(i * freqData.length / 8);
-    const val = freqData[idx] || 0;
-    gl.uniform1f(uFreqs[i], val);
-    energy += val;
-  }
-  energy /= 8;
-  gl.uniform1f(uEnergy, energy);
-  
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-}
-render();
+function mk(t,s){const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);
+if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){console.error(gl.getShaderInfoLog(sh));return null;}return sh;}
+const pg=gl.createProgram();gl.attachShader(pg,mk(gl.VERTEX_SHADER,vs));gl.attachShader(pg,mk(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pg);gl.useProgram(pg);
+const bf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const pL=gl.getAttribLocation(pg,'p');gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,false,0,0);
+const uT=gl.getUniformLocation(pg,'T'),uR=gl.getUniformLocation(pg,'R'),uE=gl.getUniformLocation(pg,'E');
+const uF=[];for(let i=0;i<8;i++)uF.push(gl.getUniformLocation(pg,'F['+i+']'));
+const t0=Date.now();
+(function r(){requestAnimationFrame(r);analyser.getByteFrequencyData(freqData);
+const t=(Date.now()-t0)/1e3;gl.uniform1f(uT,t);gl.uniform2f(uR,canvas.width,canvas.height);
+let e=0;for(let i=0;i<8;i++){const v=freqData[Math.floor(i*freqData.length/8)]||0;gl.uniform1f(uF[i],v);e+=v;}
+gl.uniform1f(uE,e/8);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);})();
 </script>
 </body>
 </html>
