@@ -10,33 +10,35 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup CMake
-        uses: lukka/get-cmake@latest
-
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        with:
+          submodules: recursive
 
       - name: Build plugin
+        shell: cmd
         run: |
           cd vst
           mkdir build-windows
           cd build-windows
-          cmake .. -G "Visual Studio 17 2022" -A x64
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
           cmake --build . --config Release
 
       - name: Create Inno Setup installer
+        shell: cmd
         run: |
-          choco install innosetup -y
-          iscc installers/windows/0MGE_setup.iss
+          choco install innosetup -y --no-progress
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\windows\0MGE_setup.iss
 
-      - name: Upload artifact
+      - name: Upload plugin
         uses: actions/upload-artifact@v4
         with:
-          name: 0MGE-windows
-          path: |
-            vst/build-windows/Release/0MGE.vst3
-            installers/windows/Output/0MGE_setup.exe
+          name: 0MGE-windows-vst3
+          path: vst/build-windows/Release/0MGE.vst3
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: 0MGE-windows-installer
+          path: installers/windows/Output/*.exe
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -44,5 +46,5 @@ jobs:
         with:
           files: |
             vst/build-windows/Release/0MGE.vst3
-            installers/windows/Output/0MGE_setup.exe
+            installers/windows/Output/*.exe
           generate_release_notes: true
