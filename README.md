@@ -59,7 +59,32 @@ This generates from Slut Online's music. To generate from your own — just use 
 
 ### Desktop App (`app.py`)
 
-PySide6 GUI. Select folder → Generate. Wraps the full pipeline.
+![Desktop App](app.png)
+
+PySide6 (Qt) desktop interface. The main way to use 0MGE — one window, one button, zero friction.
+
+**What it does:**
+- Scans your music folders (Music, Downloads, Desktop, Ableton, external drives)
+- Extracts micro-grains from every track (55ms–3s fragments)
+- Builds a grain pool locally (~64MB lite cache)
+- Trains a MultiNavigator on your grains
+- Generates new stereo WAV files from your trained pool
+- Plays back results with built-in player
+
+**UI:**
+- Folder selector (auto-detects Music/Downloads/Ableton)
+- Bars, BPM, Temperature, Seed controls
+- Multi-stream toggle (6 frequency bands)
+- Train MultiNavigator checkbox
+- Real-time progress with spectral output preview
+- Generated files open in Finder/Explorer
+
+**Settings persist** in `app_settings.json` — remembers your folder, bars, BPM between sessions.
+
+```bash
+pip install PySide6 soundfile numpy
+python3 app.py
+```
 
 ### Neural Engine (`granular_field.py`)
 
@@ -74,6 +99,8 @@ python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_mul
 ```
 
 ### VST3/AU Plugin (`vst/`)
+
+![VST Plugin](vst.png)
 
 **Completely separate from the neural engine.** A real-time granular processor built with JUCE 8.0.6. No AI — pure DSP.
 

@@ -13,9 +13,23 @@ tags:
 
 # 0MGE: Neural Granular Engine
 
-Pre-trained granular navigator and grain pool trained on 2389 tracks (~48 hours of music). Generates new drone landscapes, textures, and atmospheres by walking a learned grain field.
+Pre-trained neural granular engine trained on 2389 tracks (~48 hours). Generates new drone landscapes, textures, and atmospheres from a learned grain field.
 
-**For source code, training pipeline, and the desktop app:** [0MGE on GitHub](https://github.com/0penAGI/0MGE)
+![Desktop App](app.png)
+
+![VST Plugin](vst.png)
+
+**Full source code, training pipeline, and desktop app:** [0MGE on GitHub](https://github.com/0penAGI/0MGE)
+
+---
+
+## What This Is
+
+A neural network that learns from music and generates new sound. Not text-to-music. It scans audio files, cuts them into millions of micro-grains, and trains a navigator to assemble those grains into new sonic worlds.
+
+This repo contains a **pre-trained model and grain pool** trained on Slut Online's music (2389 tracks). Download, generate, hear what it sounds like.
+
+To generate from your own music — use the [desktop app](https://github.com/0penAGI/0MGE) (scans your library, trains locally).
 
 ---
 
@@ -81,6 +95,17 @@ Three-tier hierarchy extracted via STFT (n_fft=1024, hop=256):
 |--------|------|------|-------|
 | Critic score | 0.292 | 0.285 | 0.008 |
 | File size | 5.3 MB | 1.4 MB | 3.9× |
+
+---
+
+## Audio Samples
+
+| Sample | Duration | Model |
+|--------|----------|-------|
+| `samples/drone-01.mp3` | 16s | INT8 quantized |
+| `samples/drone-02.mp3` | 32s | FP32 6-stream |
+| `samples/drone-03.mp3` | 60s | Full pool demo |
+| `samples/drone-04-int8.mp3` | 16s | Quantization comparison |
 
 ---
 
