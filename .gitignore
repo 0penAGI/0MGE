@@ -18,3 +18,4 @@ release/macos/
 genome.json
 genome_filelist.json
 genome_test_info.json
+train_multi.log

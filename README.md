@@ -1,6 +1,19 @@
 # 0MGE — 0penAGI Music Granular Engine
 
-Real-time granular music synthesis system. Extract hierarchical grains from audio, train neural navigators, generate new music, and process live audio through a VST3/AU plugin.
+**Drone sound landscape generator** — not a classic music generator.
+
+0MGE transforms your music into evolving soundscapes, textures, and atmospheres. Feed it any audio and it breaks it into micro-grains, then rebuilds new sonic worlds using a neural navigator. Perfect for **sound design, horror games, film scores, and experimental audio**.
+
+The neural engine was trained on music by **Slut Online** (with permission).
+
+---
+
+## Demo
+
+| Sample | Duration | Description |
+|--------|----------|-------------|
+| [INT8 Test](samples/granular_int8_test.wav) | 32s | Drone landscape from quantized model |
+| [Big Pool Demo](samples/granular_bigpool_demo.wav) | 60s | Multi-stream generation from full grain pool |
 
 ---
 
@@ -14,7 +27,34 @@ Real-time granular music synthesis system. Extract hierarchical grains from audi
 setup.bat
 ```
 
-Creates venv, installs deps, opens the desktop app. That's it.
+Creates venv, installs deps, opens the desktop app.
+
+---
+
+## Downloads
+
+### VST3 / AU Plugin
+
+| Platform | Format | Install |
+|----------|--------|---------|
+| macOS | VST3 + AU (.pkg) | Double-click installer |
+| Windows | VST3 (.exe) | Run installer |
+
+### Standalone App (Python + Neural Engine)
+
+| Platform | Format | Install |
+|----------|--------|---------|
+| macOS | .app (PyInstaller) | Drag to Applications |
+| Windows | .exe (PyInstaller) | Run installer |
+
+### Models (HuggingFace)
+
+| File | Size | Description |
+|------|------|-------------|
+| [granular_multi_v1_int8.npz](https://huggingface.co/0penAGI/0MGE) | 1.4 MB | **Recommended** — INT8 quantized 6-stream navigator |
+| [granular_multi_v1.pt](https://huggingface.co/0penAGI/0MGE) | 5.3 MB | FP32 6-stream navigator |
+| [granular_pool_v2_int16.npz](https://huggingface.co/0penAGI/0MGE) | 4.9 GB | Full grain pool with raw audio (INT16) |
+| [granular_pool_lite.npz](https://huggingface.co/0penAGI/0MGE) | 64 MB | Lite pool (features only, no raw audio) |
 
 ---
 
@@ -32,9 +72,9 @@ Core engine (~1430 lines). Three-tier grain hierarchy:
 
 **Pipeline:**
 1. **Scan** — recursive walk of Music/Ableton/etc folders, dedup by MD5
-2. **Extract** — STFT → 22-dim spectral features per grain (centroid, bandwidth, flatness, rolloff, 6 band energies, temporal stats, flux)
+2. **Extract** — STFT → 22-dim spectral features per grain
 3. **Cluster** — MiniBatchKMeans, 1024 clusters across all grains
-4. **Train** — Navigator learns to walk the grain field (predict next grain from context)
+4. **Train** — MultiNavigator learns to walk the grain field (6 streams)
 5. **Generate** — multi-stream synthesis with spectral critics
 
 **6-Stream Architecture:**
@@ -48,208 +88,79 @@ Core engine (~1430 lines). Three-tier grain hierarchy:
 | noise | 4–8 kHz | Brightness |
 | air | 8–11 kHz | Top shimmer |
 
-**Neural Navigator** (`Navigator`, `MultiNavigator`):
-- Transformer with 4 heads, 3 layers, 192 hidden dim
-- 48-dim state, 12-length context window
-- 6 independent stream heads for multi-layer synthesis
-- Trained on grain feature sequences (8000 steps, batch 128)
-
-**Spectral Critic:**
-- `MultiScaleCritic` — energy/temporal flux/rhythm scoring
-- `STFTCritic` — spectral envelope matching, band energy ratios
-- `SpectralField` — attraction/repulsion between streams
-
-**Audio Processing Chain:**
-- Band-pass filtering (butter, per-stream)
-- OTT compression
-- Stereo enhancement/spread
-- Saturation, reverb, limiter
-- Final master (limiter + stereo spread)
-
 ### 2. Desktop App (`app.py`)
 
-PySide6 (Qt) desktop UI. Minimal design — one button, one result.
-
-**Features:**
-- Audio file scanner (Music, Documents, Downloads, Desktop, Ableton)
-- Waveform display with playback
-- Stream parameter sliders (per-band weights)
-- Settings: bars, BPM, seed, temperature, multi-stream toggle
-- In-app audio player (QMediaPlayer)
-- Generated output history
+PySide6 (Qt) desktop UI — one button, one result.
 
 ### 3. Genome Scanner (`genome_scan.py`)
 
-Advanced track generator (~709 lines). Beat-aware audio collage.
-
-**Features:**
-- Beat-aligned extraction (not random cuts)
-- Tempo normalization (phase vocoder stretch)
-- Harmonic/key matching (Krumhansl-Schmuckler profiles)
-- Structure-aware arc (intro → build → drop → break → outro)
-- Click-free transitions (zero-crossing + equal-power crossfade)
+Beat-aware audio collage generator with tempo normalization, harmonic matching, and click-free transitions.
 
 ### 4. VST3/AU Plugin (`vst/`)
 
 Real-time granular processing plugin built with JUCE 8.0.6.
 
-**Engine (32 persistent voices):**
-- COLA Hanning envelope (click-free overlap-add)
-- normFactor = 0.25 / max(1, density) — prevents constructive interference
-- Circular buffer input capture
-- Freeze reverb: LP filter + 12% L/R crossfeed in feedback path
-- Spatial spread: pan ±0.5 with focus-based narrowing
-- 8-band spectral analysis (256-point FFT every 512 samples)
-
-**UI (9 knobs, 3 rows):**
-
-| Row 1 | Row 2 | Row 3 |
-|-------|-------|-------|
-| Density / Size / Scatter / Pitch | Stretch / Reverse / Focus | Mix / Freeze |
-
-**Visualization:**
-- Real input waveform from circular buffer
-- 80 glassmorphism particles (freq-band tied, trail enabled)
-- 7-band spectral bars with animated centroid
-- Audio-reactive background pulse
-- Crystalline freeze overlay
+- 32 persistent voices, COLA Hanning envelope
+- 9 knobs: Density, Pitch, Stretch, Reverse, Size, Scatter, Mix, Freeze, Focus
+- Spectral visualization, glassmorphism particles, audio-reactive UI
+- Freeze reverb, spatial spread
 
 ---
 
-## Installation
+## Build from Source
 
-### Desktop App
-```bash
-# macOS / Linux
-./bootstrap.sh
-
-# Windows
-setup.bat
-```
-
-### VST3/AU Plugin
-
-Pre-built binaries in `release/`:
-
-```
-release/
-  macos/
-    0MGE.component    → AU (Logic, GarageBand)
-    0MGE.vst3         → VST3 (Ableton, FL Studio, Reaper, etc.)
-  windows/
-    README.txt        → Build instructions for Windows
-```
-
-**Install (macOS):**
-```bash
-cp -R release/macos/0MGE.component ~/Library/Audio/Plug-Ins/Components/
-cp -R release/macos/0MGE.vst3 ~/Library/Audio/Plug-Ins/VST3/
-```
-
-**Install (Windows):**
-Copy `0MGE.vst3` to `C:\Program Files\Common Files\VST3\`
-
-### Build Plugin from Source
+### Plugin
 
 **macOS:**
 ```bash
-cd vst
-mkdir build && cd build
-cmake -G Xcode ..
-cmake --build . --config Release
+cd vst && mkdir build && cd build
+cmake -G Xcode .. && cmake --build . --config Release
 ```
 
 **Windows:**
 ```bash
-cd vst
-mkdir build && cd build
-cmake -G "Visual Studio 17 2022" -A x64 ..
-cmake --build . --config Release
+cd vst && mkdir build && cd build
+cmake -G "Visual Studio 17 2022" -A x64 .. && cmake --build . --config Release
 ```
 
-Requires: CMake 3.22+, internet (fetches JUCE 8.0.6 automatically).
+### Standalone App
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name 0MGE \
+    --add-data "granular_multi_v1_int8.npz:." \
+    --add-data "granular_multi_v1_int8_meta.json:." \
+    --add-data "granular_pool_lite.npz:." \
+    app.py
+```
 
 ---
 
 ## CLI
 
 ```bash
-# Generate 60 bars, multi-stream (6 layers)
+# Generate 60 bars, multi-stream
 python3 granular_field.py --bars 60 --multi-stream --seed 42
 
-# Generate with closed-loop critic (8 iterations)
+# With closed-loop critic
 python3 granular_field.py --bars 60 --multi-stream --closed-loop 8
-
-# Single-stream (faster)
-python3 granular_field.py --bars 60 --seed 42
-
-# Rebuild pool with full audio
-python3 granular_field.py --bars 15 --full-pool
 
 # Train multi-stream navigator
 python3 granular_field.py --train-multi
 
-# Genome scanner
-python3 genome_scan.py
+# Rebuild pool with full audio
+python3 granular_field.py --full-pool --train-multi
 ```
 
 ---
 
-## Dependencies
+## HuggingFace
 
-```
-numpy
-torch
-librosa
-soundfile
-scikit-learn
-PySide6
-```
-
-Platform-specific:
-- macOS: Apple Silicon optimized (MPS acceleration)
-- GPU: CUDA-compatible PyTorch (optional)
-
----
-
-## File Structure
-
-| File | Description |
-|------|-------------|
-| `granular_field.py` | Core engine — extraction, training, generation (~1430 lines) |
-| `app.py` | PySide6 desktop UI (~630 lines) |
-| `genome_scan.py` | Beat-aware track generator (~709 lines) |
-| `granular_pool_lite.npz` | Lite pool: 425K micro + 118K meso + 23K macro grains (features only) |
-| `granular_navigator_v2.pt` | Trained single-stream navigator |
-| `granular_output/` | Generated audio tracks |
-| `genome_filelist.json` | Cached audio file list |
-| `scan_index.json` | Desktop app scan cache |
-| `app_settings.json` | Desktop app settings |
-| `vst/` | JUCE plugin source |
-| `release/` | Pre-built plugin binaries |
-
----
-
-## Architecture
-
-```
-Audio Library (2389+ tracks)
-    ↓ scan + dedup (MD5)
-STFT + Feature Extraction (22-dim)
-    ↓ 3-tier hierarchy
-Micro / Meso / Macro Grains
-    ↓ MiniBatchKMeans (1024 clusters)
-Grain Pool (566K grains)
-    ↓ train (Transformer, 8000 steps)
-Navigator (6-stream heads)
-    ↓ generate
-Spectral Field (attraction/repulsion)
-    ↓ multi-scale critics
-Audio Output (WAV)
-```
+Models, quantized weights, and audio samples: [0penAGI/0MGE on HuggingFace](https://huggingface.co/0penAGI/0MGE)
 
 ---
 
 ## Credits
 
 by **0penAGI** x TeMeT x Slut Online
+
+Neural engine trained on music by **Slut Online** with permission.
