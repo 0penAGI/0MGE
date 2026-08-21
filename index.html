@@ -215,6 +215,7 @@ void main(){
   float drift=0.3+energy*0.4;
   float twist=bass*0.2;
   float ripple=hi*0.15;
+  float warmth=energy*0.15;
 
   vec2 warp=vec2(
     fbm(uv*2.+vec2(t*drift,t*drift*0.7)),
@@ -238,13 +239,13 @@ void main(){
   vec3 sage=vec3(.5,.75,.6);
   vec3 violet=vec3(.65,.5,.8);
 
-  vec3 c=mix(vec3(.96,.95,.93),warm,smoothstep(0.15,0.55,flow)*0.85);
+  vec3 c=mix(vec3(.96,.95,.93),warm+vec3(warmth,0,0),smoothstep(0.15,0.55,flow)*0.85);
   c=mix(c,cool,smoothstep(0.35,0.75,flow)*0.75);
-  c=mix(c,blush,smoothstep(0.45,0.85,bass)*0.65);
+  c=mix(c,blush+vec3(warmth*.5,0,0),smoothstep(0.45,0.85,bass)*0.65);
   c=mix(c,sage,smoothstep(0.3,0.7,fbm(uv*3.+vec2(t*.08)))*0.6);
-  c=mix(c,violet,smoothstep(0.55,0.95,hi)*0.45);
+  c=mix(c,violet+vec3(0,0,warmth*.3),smoothstep(0.55,0.95,hi)*0.45);
 
-  c+=fbm(uv*7.+warp)*0.03;
+  c+=fbm(uv*7.+warp)*0.03*(1.+energy*0.5);
 
   c=clamp(c,0.,1.);
   gl_FragColor=vec4(c,1);
