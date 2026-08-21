@@ -168,19 +168,19 @@ INT8 navigator only (grain pool stays INT16):
 
 ### Manual Install (no installer needed)
 
-Just grab the plugin file and copy it to your DAW's plugin folder:
+Download, unzip, copy to your DAW's plugin folder:
 
-| File | Download | Where to put it |
+| What | Download | Unzip & copy to |
 |------|----------|-----------------|
-| **VST3** (macOS) | [prebuilt/macOS/0MGE.vst3](prebuilt/macOS/0MGE.vst3) | `~/Library/Audio/Plug-Ins/VST3/` |
-| **AU** (macOS, Logic only) | [prebuilt/macOS/0MGE.component](prebuilt/macOS/0MGE.component) | `~/Library/Audio/Plug-Ins/Components/` |
-| **Standalone App** (macOS) | [prebuilt/macOS/0MGE.app](prebuilt/macOS/0MGE.app) | Drag to `/Applications/` |
+| **VST3** (macOS) | [0MGE-vst3-macOS.zip](0MGE-vst3-macOS.zip) (1.4 MB) | `~/Library/Audio/Plug-Ins/VST3/` |
+| **AU** (macOS, Logic only) | [0MGE-au-macOS.zip](0MGE-au-macOS.zip) (1.3 MB) | `~/Library/Audio/Plug-Ins/Components/` |
+| **Standalone App** (macOS) | [0MGE-app-macOS.zip](0MGE-app-macOS.zip) (1.6 MB) | Drag `0MGE.app` to `/Applications/` |
 
 ```bash
-# Or copy with terminal:
-cp -R prebuilt/macOS/0MGE.vst3 ~/Library/Audio/Plug-Ins/VST3/
-cp -R prebuilt/macOS/0MGE.component ~/Library/Audio/Plug-Ins/Components/
-cp -R prebuilt/macOS/0MGE.app /Applications/
+# After unzipping:
+cp -R 0MGE.vst3 ~/Library/Audio/Plug-Ins/VST3/
+cp -R 0MGE.component ~/Library/Audio/Plug-Ins/Components/
+cp -R 0MGE.app /Applications/
 ```
 
 Restart your DAW after copying. Uninstall: delete the files above.
