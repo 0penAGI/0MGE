@@ -202,6 +202,7 @@ Your own trained files are much smaller — the app builds what you need locally
 
 ## Links
 
+- [Listen to Demo](https://0penagi.github.io/0MGE/) — audio-reactive player with GLSL shader
 - [GitHub](https://github.com/0penAGI/0MGE)
 - [HuggingFace](https://huggingface.co/0penAGI/0MGE)
 
