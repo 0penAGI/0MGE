@@ -5,10 +5,10 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 BUILD_DIR="$ROOT_DIR/installers/macos/build"
 PKG_DIR="$BUILD_DIR/0MGE-pkg"
-PLUGIN_DIR="$ROOT_DIR/vst/build"
+PLUGIN_DIR="$ROOT_DIR/vst/build/ZeroMGE_Project_artefacts/Release"
 
 VERSION="1.0.0"
 PKG_NAME="0MGE-${VERSION}-macOS.pkg"
@@ -20,7 +20,7 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$PKG_DIR"
 
 # Check if plugins exist
-if [ ! -d "$PLUGIN_DIR/0MGE.vst3" ]; then
+if [ ! -d "$PLUGIN_DIR/VST3/0MGE.vst3" ]; then
     echo "❌ VST3 not found. Build plugin first:"
     echo "   cd vst && mkdir build && cd build && cmake -G Xcode .. && cmake --build . --config Release"
     exit 1
@@ -30,15 +30,15 @@ fi
 mkdir -p "$PKG_DIR/Library/Audio/Plug-Ins/VST3"
 mkdir -p "$PKG_DIR/Library/Audio/Plug-Ins/Components"
 
-cp -R "$PLUGIN_DIR/0MGE.vst3" "$PKG_DIR/Library/Audio/Plug-Ins/VST3/"
-if [ -d "$PLUGIN_DIR/0MGE.component" ]; then
-    cp -R "$PLUGIN_DIR/0MGE.component" "$PKG_DIR/Library/Audio/Plug-Ins/Components/"
+cp -R "$PLUGIN_DIR/VST3/0MGE.vst3" "$PKG_DIR/Library/Audio/Plug-Ins/VST3/"
+if [ -d "$PLUGIN_DIR/AU/0MGE.component" ]; then
+    cp -R "$PLUGIN_DIR/AU/0MGE.component" "$PKG_DIR/Library/Audio/Plug-Ins/Components/"
 fi
 
 # Also include standalone app if it exists
-if [ -d "$PLUGIN_DIR/0MGE.app" ]; then
+if [ -d "$PLUGIN_DIR/Standalone/0MGE.app" ]; then
     mkdir -p "$PKG_DIR/Applications"
-    cp -R "$PLUGIN_DIR/0MGE.app" "$PKG_DIR/Applications/"
+    cp -R "$PLUGIN_DIR/Standalone/0MGE.app" "$PKG_DIR/Applications/"
 fi
 
 # Create post-install script

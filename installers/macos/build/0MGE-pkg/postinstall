@@ -1,0 +1,5 @@
+#!/bin/bash
+echo "✅ 0MGE installed!"
+echo "   VST3: /Library/Audio/Plug-Ins/VST3/0MGE.vst3"
+echo "   AU:   /Library/Audio/Plug-Ins/Components/0MGE.component"
+echo "   Restart your DAW to see the plugin."

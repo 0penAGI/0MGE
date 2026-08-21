@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>0MGE - 0penAGI Music Granular Engine</title>
+    <options customize="never" require-scripts="true" hostArchitectures="x86_64,arm64"/>
+    <domains enable_localSystem="true"/>
+    <choices-outline>
+        <line choice="0MGE"/>
+    </choices-outline>
+    <choice id="0MGE" title="0MGE Plugin">
+        <pkg-ref id="com.0penagi.0mge"/>
+    </choice>
+    <pkg-ref id="com.0penagi.0mge" version="1.0.0">0MGE-component.pkg</pkg-ref>
+</installer-gui-script>
