@@ -8,51 +8,48 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Show environment
-        shell: pwsh
+      - name: Configure + Build
         run: |
-          cmake --version
-          cl 2>&1 || echo "cl not in PATH"
+          # Find Visual Studio installation
+          $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          Write-Host "VS: $vsPath"
 
-      - name: Configure CMake
-        shell: pwsh
-        working-directory: vst
-        run: |
-          New-Item -ItemType Directory -Force -Path build-windows | Out-Null
-          cd build-windows
-          cmake .. -G "Visual Studio 17 2022" -A x64 2>&1
-
-      - name: Build
-        shell: pwsh
-        working-directory: vst/build-windows
-        run: |
-          cmake --build . --config Release -- /v:minimal 2>&1
-
-      - name: List output
-        if: always()
-        shell: pwsh
-        run: |
-          Write-Host "=== Build directory ==="
-          Get-ChildItem -Recurse vst/build-windows -Include "*.vst3","*.exe","*.dll" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
-          Write-Host "=== Release dir ==="
-          if (Test-Path vst/build-windows/Release) {
-            Get-ChildItem vst/build-windows/Release -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+          # Load MSVC environment
+          $vcvarsall = Join-Path $vsPath "VC\Auxiliary\Build\vcvarsall.bat"
+          cmd /c "`"$vcvarsall`" x64 && set" | ForEach-Object {
+            if ($_ -match "^(.+?)=(.*)$") {
+              [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2])
+            }
           }
 
-      - name: Install Inno Setup
-        if: success()
-        shell: pwsh
-        run: choco install innosetup -y --no-progress
+          # Install Ninja
+          choco install ninja -y --no-progress
 
-      - name: Build installer
-        if: success()
-        shell: pwsh
+          # Build
+          cd vst
+          New-Item -ItemType Directory -Force -Path build-windows | Out-Null
+          cd build-windows
+          cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl 2>&1
+          cmake --build . 2>&1
+
+      - name: Show output
+        if: always()
         run: |
+          Get-ChildItem -Recurse vst/build-windows -Include "*.vst3","*.exe","*.dll" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+
+      - name: Create installer
+        if: success()
+        run: |
+          choco install innosetup -y --no-progress
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\windows\0MGE_setup.iss 2>&1
 
       - name: Upload plugin
@@ -60,7 +57,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: 0MGE-windows-vst3
-          path: vst/build-windows/Release/0MGE.vst3
+          path: vst/build-windows/0MGE.vst3
 
       - name: Upload installer
         if: success()
@@ -74,6 +71,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            vst/build-windows/Release/0MGE.vst3
+            vst/build-windows/0MGE.vst3
             installers/windows/Output/*.exe
           generate_release_notes: true
