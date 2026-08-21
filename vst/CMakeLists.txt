@@ -50,3 +50,9 @@ target_compile_definitions(ZeroMGE_Project
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_DISPLAY_SPLASH_SCREEN=0
 )
+
+set(JUCE_APP_ICON "${CMAKE_CURRENT_SOURCE_DIR}/Source/0MGE.icns")
+target_sources(ZeroMGE_Project PRIVATE "${JUCE_APP_ICON}")
+set_source_files_properties("${JUCE_APP_ICON}" PROPERTIES
+    MACOSX_PACKAGE_LOCATION "Resources"
+)
