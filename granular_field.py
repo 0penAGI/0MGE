@@ -1389,6 +1389,11 @@ def main():
         pool = {}
         for k in d.files:
             pool[k] = d[k].tolist() if k in ("trajectories", "micro_sources", "meso_sources", "macro_sources") else d[k]
+        # dequantize INT16 audio back to float32 for synthesis/critic
+        for k in ["micro_audio", "meso_audio", "macro_audio"]:
+            if k in pool and pool[k].dtype == np.int16:
+                pool[k] = pool[k].astype(np.float32) / 32767.0
+                print(f"   dequantized {k} -> float32")
     else:
         files = scan_audio(SCAN_DIRS)
         print(f"   {len(files)} files")
