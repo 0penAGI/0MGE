@@ -17,52 +17,60 @@ jobs:
         shell: pwsh
         run: |
           cmake --version
-          where.exe cl.exe 2>$null
-          Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -Recurse -Filter "cl.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 FullName
+          cl 2>&1 || echo "cl not in PATH"
 
       - name: Configure CMake
         shell: pwsh
         working-directory: vst
         run: |
-          New-Item -ItemType Directory -Force -Path build-windows
+          New-Item -ItemType Directory -Force -Path build-windows | Out-Null
           cd build-windows
-          cmake .. -G "Visual Studio 17 2022" -A x64
+          cmake .. -G "Visual Studio 17 2022" -A x64 2>&1
 
       - name: Build
         shell: pwsh
         working-directory: vst/build-windows
         run: |
-          cmake --build . --config Release 2>&1
+          cmake --build . --config Release -- /v:minimal 2>&1
 
       - name: List output
+        if: always()
         shell: pwsh
         run: |
-          Get-ChildItem -Recurse vst/build-windows -Filter "*.vst3" -ErrorAction SilentlyContinue
-          Get-ChildItem -Recurse vst/build-windows/Release -ErrorAction SilentlyContinue
+          Write-Host "=== Build directory ==="
+          Get-ChildItem -Recurse vst/build-windows -Include "*.vst3","*.exe","*.dll" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+          Write-Host "=== Release dir ==="
+          if (Test-Path vst/build-windows/Release) {
+            Get-ChildItem vst/build-windows/Release -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+          }
 
       - name: Install Inno Setup
+        if: success()
         shell: pwsh
         run: choco install innosetup -y --no-progress
 
       - name: Build installer
+        if: success()
         shell: pwsh
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\windows\0MGE_setup.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\windows\0MGE_setup.iss 2>&1
 
       - name: Upload plugin
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: 0MGE-windows-vst3
           path: vst/build-windows/Release/0MGE.vst3
 
       - name: Upload installer
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: 0MGE-windows-installer
           path: installers/windows/Output/*.exe
 
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: success() && startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |

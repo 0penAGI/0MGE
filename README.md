@@ -46,13 +46,36 @@ python3 granular_field.py --bars 60 --multi-stream
 
 ### Option 3: Pre-trained Demo
 
+Hear what 0MGE sounds like with our pre-trained model (trained on 2389 tracks).
+
 ```bash
-# Download from HuggingFace and generate with pre-trained model
+# 1. Install dependencies
+pip install numpy torch librosa scikit-learn soundfile
+
+# 2. Download model + grain pool from HuggingFace
+#    Model (5.3 MB): https://huggingface.co/0penAGI/0MGE/resolve/main/granular_multi_v1.pt
+#    Grain pool (4.9 GB): https://huggingface.co/0penAGI/0MGE/resolve/main/granular_pool_v2_int16.npz
+#    Or use HuggingFace CLI:
+pip install huggingface_hub
+huggingface-cli download 0penAGI/0MGE granular_multi_v1.pt --local-dir .
+huggingface-cli download 0penAGI/0MGE granular_pool_v2_int16.npz --local-dir .
+
+# 3. Generate (60 seconds of drone landscape)
 python3 granular_field.py \
   --pool granular_pool_v2_int16.npz \
   --model granular_multi_v1.pt \
   --bars 60 --multi-stream
+
+# Output: granular_output/granular_60bars_*.wav (stereo, 22050 Hz)
 ```
+
+Try different seeds for different textures:
+```bash
+python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt --bars 30 --multi-stream --seed 42
+python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt --bars 30 --multi-stream --seed 1337
+```
+
+**Want to generate from YOUR music?** Use the desktop app (Option 1) — it handles everything.
 
 ---
 
