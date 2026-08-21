@@ -166,30 +166,30 @@ float sdT(vec3 p,vec2 t){vec2 q=vec2(length(p.xz)-t.x,p.y);return length(q)-t.y;
 void main(){
   vec2 uv=(gl_FragCoord.xy-0.5*R)/min(R.x,R.y);
   float t=T*0.12;
-  float b=F[0]*.01,m=F[3]*.008,h=F[6]*.006,e=E*.012;
-  vec3 ro=vec3(0,0,-3.+e*1.5);vec3 rd=normalize(vec3(uv,1.5));
+  float b=F[0]*.015,m=F[3]*.012,h=F[6]*.01,e=E*.018;
+  vec3 ro=vec3(0,0,-3.+e*2.);vec3 rd=normalize(vec3(uv,1.5));
   float d=1e10;vec3 p;
-  for(int i=0;i<50;i++){
+  for(int i=0;i<60;i++){
     p=ro+rd*d;
-    float s1=sdS(p-vec3(sin(t*.7)*1.5,cos(t*.5)*.8+b*.3,0),.5+h*.3);
-    float s2=sdT(p-vec3(cos(t*.3)*.8,sin(t*.9)*.5,1.+b*.5),vec2(.6+m*.2,.15));
-    float s3=sdS(p-vec3(sin(t*1.1)*.4,cos(t*.7)*1.2,.5),.3+e*.4);
-    float s4=sdS(p+vec3(sin(t*.4)*2.,0,cos(t*.6)*1.5),.2+h*.2);
-    float q=min(min(s1,s2),min(s3,s4));d+=q*.8;
+    float s1=sdS(p-vec3(sin(t*.7)*1.5,cos(t*.5)*.8+b*.4,0),.5+h*.4);
+    float s2=sdT(p-vec3(cos(t*.3)*.8,sin(t*.9)*.5,1.+b*.6),vec2(.6+m*.3,.15));
+    float s3=sdS(p-vec3(sin(t*1.1)*.4,cos(t*.7)*1.2,.5),.3+e*.5);
+    float s4=sdS(p+vec3(sin(t*.4)*2.,0,cos(t*.6)*1.5),.2+h*.3);
+    float q=min(min(s1,s2),min(s3,s4));d+=q*.7;
     if(d>15.||q<.001)break;
   }
-  vec3 c=vec3(.97,.96,.94);
+  vec3 c=vec3(.96,.95,.93);
   if(d<15.){
     vec3 n=normalize(p);float l=dot(n,normalize(vec3(1,1,-1)))*.5+.5;
     float rim=1.-max(dot(-rd,n),0.);
-    vec3 warm=vec3(.95,.90,.82);vec3 cool=vec3(.85,.88,.93);
+    vec3 warm=vec3(.82,.75,.65);vec3 cool=vec3(.6,.65,.75);
     vec3 col=mix(cool,warm,l);
-    col+=rim*rim*.15;
-    col*=.92;
+    col+=rim*rim*.25;
+    col*=.7;
     c=col;
   }
   float grain=fract(sin(dot(gl_FragCoord.xy+T,vec2(12.9898,78.233)))*43758.5453);
-  c+=grain*.015;
+  c+=grain*.02;
   gl_FragColor=vec4(c,1);
 }`;
 
