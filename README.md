@@ -225,6 +225,8 @@ Restart your DAW after copying. Uninstall: delete the files above.
 | [Landscape #2](samples/drone-02.mp3) | 32s | 6-stream generation |
 | [Full Pool Demo](samples/drone-03.mp3) | 60s | 566K grains |
 | [Quantized vs Original](samples/drone-04-int8.mp3) | 16s | INT8 vs FP32 comparison |
+| [Local INT8 Test](samples/drone-05-local-test.mp3) | 32s | Generated locally on user machine |
+| [Local FP32 Shadow](samples/drone-06-local-fp32.mp3) | 16s | Full precision, local generation |
 
 ---
 
