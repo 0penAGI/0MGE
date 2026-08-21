@@ -96,14 +96,14 @@ h1{font-family:'Space Mono',monospace;font-size:clamp(2.5rem,10vw,5rem);font-wei
         <div class="play-btn">&#9654;</div>
         <div class="track-info">
           <div class="track-name">Full Pool <span class="badge">60s</span></div>
-          <div class="track-meta">566K grains · full grain pool</div>
+          <div class="track-meta">566K grains · richer, fuller sound</div>
         </div>
       </div>
       <div class="track" data-src="samples/drone-04-int8.mp3">
         <div class="play-btn">&#9654;</div>
         <div class="track-info">
           <div class="track-name">Quantized vs Original <span class="badge">1.4 MB</span></div>
-          <div class="track-meta">3.9x smaller, same quality</div>
+          <div class="track-meta">3.9x smaller, slightly less detail</div>
         </div>
       </div>
     </div>
@@ -190,7 +190,7 @@ void main(){
   float t=T*0.15;
   float b=F[0]/255.0,m=F[3]/255.0,h=F[6]/255.0,e=E/255.0;
   vec3 ro=vec3(0,0,-3.+e*3.);vec3 rd=normalize(vec3(uv,1.5));
-  float d=1e10;vec3 p;
+  float d=0.;vec3 p;
   for(int i=0;i<60;i++){
     p=ro+rd*d;
     float s1=sdS(p-vec3(sin(t*.7)*1.5,cos(t*.5)*.8+b*.5,0),.5+h*.5);
