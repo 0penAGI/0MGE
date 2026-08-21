@@ -9,7 +9,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0a0a;color:#e0e0e0;font-family:'Inter',sans-serif;overflow-x:hidden}
-canvas#bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0}
+canvas#bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0.7}
 .overlay{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:3rem 1.5rem}
 .hero{text-align:center;margin-bottom:2rem}
 h1{font-family:'Space Mono',monospace;font-size:clamp(2.5rem,10vw,5rem);font-weight:700;letter-spacing:-0.03em;line-height:1;margin-bottom:0.3rem;color:#fff}
@@ -27,8 +27,12 @@ h1{font-family:'Space Mono',monospace;font-size:clamp(2.5rem,10vw,5rem);font-wei
 .track{display:flex;align-items:center;gap:0.8rem;padding:0.65rem 0.9rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent}
 .track:hover,.track:active{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.12)}
 .track.active{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2)}
-.play-btn{width:36px;height:36px;min-width:36px;border:1px solid rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);font-size:0.65rem;transition:all 0.2s}
-.track.active .play-btn{border-color:rgba(255,255,255,0.5);color:#fff;background:rgba(255,255,255,0.1)}
+.play-btn{width:36px;height:36px;min-width:36px;border:1px solid rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);transition:all 0.2s}
+.play-btn .ico-play{width:0;height:0;border-style:solid;border-width:6px 0 6px 10px;border-color:transparent transparent transparent rgba(255,255,255,0.5);margin-left:2px}
+.play-btn .ico-pause{display:none;width:10px;height:12px;border-left:3px solid #fff;border-right:3px solid #fff}
+.track.active .play-btn .ico-play{display:none}
+.track.active .play-btn .ico-pause{display:block}
+.track.active .play-btn{border-color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1)}
 .track-info{flex:1;min-width:0}
 .track-name{font-family:'Space Mono',monospace;font-size:clamp(0.65rem,2vw,0.75rem);color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .track-meta{font-size:0.6rem;color:rgba(255,255,255,0.25);margin-top:0.1rem}
@@ -79,28 +83,28 @@ h1{font-family:'Space Mono',monospace;font-size:clamp(2.5rem,10vw,5rem);font-wei
     <div class="player-title">Demo — Slut Online, 2389 tracks</div>
     <div class="track-list" id="trackList">
       <div class="track" data-src="samples/drone-01.mp3">
-        <div class="play-btn">&#9654;</div>
+        <div class="play-btn"><div class="ico-play"></div><div class="ico-pause"></div></div>
         <div class="track-info">
           <div class="track-name">Landscape #1 <span class="badge">INT8</span></div>
           <div class="track-meta">16s · trained on 2389 tracks</div>
         </div>
       </div>
       <div class="track" data-src="samples/drone-02.mp3">
-        <div class="play-btn">&#9654;</div>
+        <div class="play-btn"><div class="ico-play"></div><div class="ico-pause"></div></div>
         <div class="track-info">
           <div class="track-name">Landscape #2 <span class="badge">6-stream</span></div>
           <div class="track-meta">32s · sub / drums / harmonic / texture / noise / air</div>
         </div>
       </div>
       <div class="track" data-src="samples/drone-03.mp3">
-        <div class="play-btn">&#9654;</div>
+        <div class="play-btn"><div class="ico-play"></div><div class="ico-pause"></div></div>
         <div class="track-info">
           <div class="track-name">Full Pool <span class="badge">60s</span></div>
           <div class="track-meta">566K grains · richer, fuller sound</div>
         </div>
       </div>
       <div class="track" data-src="samples/drone-04-int8.mp3">
-        <div class="play-btn">&#9654;</div>
+        <div class="play-btn"><div class="ico-play"></div><div class="ico-pause"></div></div>
         <div class="track-info">
           <div class="track-name">Quantized vs Original <span class="badge">1.4 MB</span></div>
           <div class="track-meta">3.9x smaller, slightly less detail</div>
@@ -136,31 +140,32 @@ const analyser = audioCtx.createAnalyser();
 analyser.fftSize = 512;
 analyser.smoothingTimeConstant = 0.82;
 const freqData = new Uint8Array(analyser.frequencyBinCount);
-let audio = null, currentTrack = null;
+let audio = null, currentTrack = null, lastSource = null;
 
 function playTrack(el) {
   const src = el.dataset.src;
   if (currentTrack === el && audio && !audio.paused) {
-    audio.pause(); el.classList.remove('active');
-    el.querySelector('.play-btn').innerHTML = '&#9654;'; return;
+    audio.pause(); el.classList.remove('active'); return;
   }
   document.querySelectorAll('.track').forEach(t => {
-    t.classList.remove('active'); t.querySelector('.play-btn').innerHTML = '&#9654;';
+    t.classList.remove('active');
   });
-  if (audio) { audio.pause(); audio = null; }
+  if (audio) { audio.pause(); audio.src = ''; audio = null; }
+  if (lastSource) { try { lastSource.disconnect(); } catch(e) {} lastSource = null; }
   audio = new Audio(src);
   audio.crossOrigin = 'anonymous';
-  audioCtx.createMediaElementSource(audio).connect(analyser);
+  lastSource = audioCtx.createMediaElementSource(audio);
+  lastSource.connect(analyser);
   analyser.connect(audioCtx.destination);
+  audioCtx.resume();
   audio.play(); el.classList.add('active');
-  el.querySelector('.play-btn').innerHTML = '&#9646;&#9646;';
   currentTrack = el;
   audio.ontimeupdate = () => {
     document.getElementById('progressFill').style.width = (audio.currentTime / audio.duration * 100) + '%';
     document.getElementById('timeDisplay').textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration || 0);
   };
   audio.onended = () => {
-    el.classList.remove('active'); el.querySelector('.play-btn').innerHTML = '&#9654;';
+    el.classList.remove('active');
     currentTrack = null;
   };
 }
@@ -172,7 +177,7 @@ const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
 if (!gl) { canvas.style.background = '#0a0a0a'; }
 
 function resize() {
-  const d = Math.min(window.devicePixelRatio, 1.5);
+  const d = Math.min(window.devicePixelRatio, 1.0);
   canvas.width = innerWidth * d; canvas.height = innerHeight * d;
   canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px';
   if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
@@ -222,10 +227,10 @@ const bf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bf);gl.bufferData(gl.AR
 const pL=gl.getAttribLocation(pg,'p');gl.enableVertexAttribArray(pL);gl.vertexAttribPointer(pL,2,gl.FLOAT,false,0,0);
 const uT=gl.getUniformLocation(pg,'T'),uR=gl.getUniformLocation(pg,'R'),uE=gl.getUniformLocation(pg,'E');
 const uF=[];for(let i=0;i<8;i++)uF.push(gl.getUniformLocation(pg,'F['+i+']'));
-const t0=Date.now();
+const t0=Date.now();const smooth=new Float32Array(8);
 (function r(){requestAnimationFrame(r);analyser.getByteFrequencyData(freqData);
 const t=(Date.now()-t0)/1e3;gl.uniform1f(uT,t);gl.uniform2f(uR,canvas.width,canvas.height);
-let e=0;for(let i=0;i<8;i++){const v=freqData[Math.floor(i*freqData.length/8)]||0;gl.uniform1f(uF[i],v);e+=v;}
+let e=0;for(let i=0;i<8;i++){const v=freqData[Math.floor(i*freqData.length/8)]||0;smooth[i]+=(v-smooth[i])*0.15;gl.uniform1f(uF[i],smooth[i]);e+=smooth[i];}
 gl.uniform1f(uE,e);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);})();
 </script>
 </body>
