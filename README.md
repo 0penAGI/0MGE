@@ -159,6 +159,20 @@ INT8 navigator only (grain pool stays INT16):
 
 ## Downloads
 
+### VST3 / AU Plugin Installer
+
+| Platform | File | Install |
+|----------|------|---------|
+| macOS | [0MGE-1.0.0-macOS.pkg](release/macos/0MGE-1.0.0-macOS.pkg) (8.6 MB) | Double-click → admin password → done |
+| Windows | `0MGE_setup.exe` | Coming soon (needs Windows machine) |
+
+**What gets installed:**
+- VST3 → `/Library/Audio/Plug-Ins/VST3/0MGE.vst3`
+- AU → `/Library/Audio/Plug-Ins/Components/0MGE.component`
+- Standalone → `/Applications/0MGE.app`
+
+Restart your DAW after install. Uninstall: delete the three files above.
+
 ### Pre-trained Models ([HuggingFace](https://huggingface.co/0penAGI/0MGE))
 
 | File | Size | Description |
