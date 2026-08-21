@@ -13,48 +13,34 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Show environment
-        run: |
-          xcodebuild -version
-          cmake --version
-          sw_vers
-
-      - name: Build plugin
+      - name: Build
         run: |
           cd vst
-          mkdir -p build-macos
-          cd build-macos
-          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
-          cmake --build . --config Release -j4
+          cmake -B build-macos -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-macos
 
-      - name: List build output
-        run: find vst/build-macos -name "*.vst3" -o -name "*.component" -o -name "0MGE" 2>/dev/null
+      - name: Find outputs
+        if: always()
+        run: find vst/build-macos -name "*.vst3" -o -name "*.component" -o -name "0MGE" -type f 2>/dev/null
 
-      - name: Create .pkg installer
+      - name: Package
+        if: success()
         run: |
           sed -i '' 's|vst/build/ZeroMGE_Project_artefacts/Release|vst/build-macos|' installers/macos/build_pkg.sh
           bash installers/macos/build_pkg.sh
 
-      - name: Upload plugin
+      - name: Upload
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: 0MGE-macos-vst3
-          path: vst/build-macos/VST3/0MGE.vst3
-
-      - name: Upload AU
-        uses: actions/upload-artifact@v4
-        with:
-          name: 0MGE-macos-au
-          path: vst/build-macos/AU/0MGE.component
-
-      - name: Upload installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: 0MGE-macos-installer
-          path: release/macos/*.pkg
+          name: 0MGE-macos
+          path: |
+            vst/build-macos/VST3/0MGE.vst3
+            vst/build-macos/AU/0MGE.component
+            release/macos/*.pkg
 
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: success() && startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
