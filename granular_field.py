@@ -1326,10 +1326,12 @@ def main():
     p.add_argument("--target-low", type=float, default=None, help="Target low-freq ratio (0-1)")
     p.add_argument("--noise-inject", type=float, default=0.0, help="Noise injection std (0-0.5)")
     p.add_argument("--train-multi", action="store_true", help="Train MultiNavigator (6-stream model)")
+    p.add_argument("--pool", type=str, default=None, help="Path to grain pool .npz (skips scan/build)")
+    p.add_argument("--model", type=str, default=None, help="Path to trained model .pt (skips training)")
     args = p.parse_args()
     t0 = time.time()
 
-    cache = POOL_CACHE if args.full_pool else POOL_CACHE_LIGHT
+    cache = args.pool if args.pool else (POOL_CACHE if args.full_pool else POOL_CACHE_LIGHT)
 
     if os.path.exists(cache):
         print(f"📦 Loading pool: {cache}")
@@ -1393,14 +1395,17 @@ def main():
             args.target_low or 0.5,
         ]
 
+    multi_model_path = args.model if args.model else MODEL_MULTI_CACHE
     model_ms = MultiNavigator().to(DEVICE)
-    if os.path.exists(MODEL_MULTI_CACHE):
-        print(f"📦 Loading multi-model: {MODEL_MULTI_CACHE}")
-        model_ms.load_state_dict(torch.load(MODEL_MULTI_CACHE, map_location=DEVICE, weights_only=False)["model_state"])
+    if os.path.exists(multi_model_path):
+        print(f"📦 Loading multi-model: {multi_model_path}")
+        model_ms.load_state_dict(torch.load(multi_model_path, map_location=DEVICE, weights_only=False)["model_state"])
 
+    single_model_path = args.model if args.model else MODEL_CACHE
     model = Navigator().to(DEVICE)
-    if os.path.exists(MODEL_CACHE):
-        model.load_state_dict(torch.load(MODEL_CACHE, map_location=DEVICE, weights_only=False)["model_state"])
+    if os.path.exists(single_model_path):
+        print(f"📦 Loading model: {single_model_path}")
+        model.load_state_dict(torch.load(single_model_path, map_location=DEVICE, weights_only=False)["model_state"])
 
     n_sec = args.bars * 4 * 60.0 / args.bpm
 
