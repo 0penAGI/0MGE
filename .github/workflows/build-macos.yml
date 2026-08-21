@@ -14,18 +14,18 @@ jobs:
       - name: Build plugin
         run: |
           cd vst
-          mkdir build-macos
+          mkdir -p build-macos
           cd build-macos
           cmake .. -G Xcode
           cmake --build . --config Release
 
       - name: Create .pkg installer
         run: |
-          # Update build_pkg.sh to use CI build path
-          sed -i '' 's|ZeroMGE_Project_artefacts/Release|Release|' installers/macos/build_pkg.sh
+          # CI build puts output directly in Release/ not ZeroMGE_Project_artefacts/Release/
+          sed -i '' 's|vst/build/ZeroMGE_Project_artefacts/Release|vst/build-macos/Release|' installers/macos/build_pkg.sh
           bash installers/macos/build_pkg.sh
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: 0MGE-macos
