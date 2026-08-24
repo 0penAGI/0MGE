@@ -160,7 +160,6 @@ public:
         float plugW = (float)getWidth();
         float plugH = (float)getHeight();
 
-        float vizCenterX = 12.0f + (plugW - 24.0f) * 0.5f;
         float vizTop = (float)vizY;
         float vizH = (float)this->vizH;
 
@@ -170,9 +169,6 @@ public:
 
         float audioSpeed = (0.2f + audioEnergy * 3.0f + density * 0.3f) * freezeDamp;
 
-        float centroid = proc.getSynth().getCurrentCentroid();
-
-        // Grain presence gates everything
         GranularSynth::GrainInfo grainData[GranularSynth::MAX_GRAINS];
         int activeCount = proc.getSynth().getActiveGrains(grainData, GranularSynth::MAX_GRAINS);
         float grainPresence = std::clamp((float)activeCount / 6.0f, 0.0f, 1.0f);
@@ -201,13 +197,19 @@ public:
             pt.x += pt.vx;
             pt.y += pt.vy;
 
-            float baseLifeDecay = (0.003f + audioEnergy * 0.004f) * freezeDamp;
-            pt.life -= baseLifeDecay;
-            if (freeze > 0.5f) pt.life += 0.004f;
+            // Life: only grows when grains exist, decays otherwise
+            if (grainPresence > 0.01f) {
+                float lifeGain = 0.02f * grainPresence * freezeDamp;
+                pt.life = std::min(pt.life + lifeGain, 1.0f);
+            } else {
+                pt.life -= 0.03f * freezeDamp;
+            }
+            if (freeze > 0.5f) pt.life = std::min(pt.life + 0.004f, 1.0f);
 
-            // Size responds to grain presence, not just input
-            pt.currentSize = pt.size * (0.3f + grainPresence * 1.2f) * (0.7f + 0.3f * std::sin(pt.phase));
-            if (freeze > 0.5f) pt.currentSize *= (1.0f + freezeFactor * 0.3f);
+            // Smooth size ramp — lerp toward target, never jump
+            float targetSize = pt.size * (0.3f + grainPresence * 1.2f) * (0.7f + 0.3f * std::sin(pt.phase));
+            if (freeze > 0.5f) targetSize *= (1.0f + freezeFactor * 0.3f);
+            pt.currentSize += (targetSize - pt.currentSize) * 0.08f;
 
             if (pt.life <= 0.0f || pt.x < -80 || pt.x > plugW + 80 ||
                 pt.y < -80 || pt.y > plugH + 80) {
@@ -220,7 +222,8 @@ public:
                 pt.vx = ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * audioSpeed * 2.0f;
                 pt.vy = ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * audioSpeed * 1.5f;
                 pt.size = 1.5f + (float)(std::rand() % 1000) / 1000.0f * 4.0f;
-                pt.life = 0.5f + (float)(std::rand() % 1000) / 1000.0f * 0.5f;
+                pt.currentSize = 0.0f;
+                pt.life = 0.0f;
                 pt.phase = (float)(std::rand() % 1000) / 1000.0f * 6.28f;
             }
         }
@@ -273,7 +276,7 @@ private:
         float grainPresence = std::clamp((float)activeCount / 6.0f, 0.0f, 1.0f);
 
         for (auto& pt : particles) {
-            float alpha = std::clamp(pt.life, 0.0f, 1.0f) * (0.15f + audioEnergy * 0.5f + grainPresence * 0.2f);
+            float alpha = std::clamp(pt.life, 0.0f, 1.0f) * (0.2f + grainPresence * 0.8f);
             if (alpha < 0.02f) continue;
 
             float px = pt.x;
