@@ -336,8 +336,15 @@ private:
     }
 
     void renderVoice(GrainVoice& v, float* outL, float* outR, int numSamples, int circLen) {
-        int start = v.blockOffset;
+        int start = std::min(v.blockOffset, numSamples - 1);
         v.blockOffset = 0;
+
+        auto safeRead = [&](int offset) -> float {
+            int idx = circWrite - 1 - offset;
+            idx = ((idx % circLen) + circLen) % circLen;
+            return circBuf[idx];
+        };
+
         for (int i = start; i < numSamples && v.active; ++i) {
             float env = 0.5f - 0.5f * std::cos(6.2831853f * v.envPhase);
 
@@ -346,13 +353,8 @@ private:
             int offset0 = (int)std::floor(historyOffset);
             float frac = historyOffset - (float)offset0;
 
-            int readIdx = ((circWrite - 1 - offset0) % circLen + circLen * 4) % circLen;
-            int readIdx2 = ((circWrite - 1 - offset0 - 1) % circLen + circLen * 4) % circLen;
-            readIdx = (readIdx % circLen + circLen) % circLen;
-            readIdx2 = (readIdx2 % circLen + circLen) % circLen;
-
-            float s0 = circBuf[readIdx];
-            float s1 = circBuf[readIdx2];
+            float s0 = safeRead(offset0);
+            float s1 = safeRead(offset0 + 1);
             float sample = s0 + (s1 - s0) * frac;
 
             float out = sample * env * v.amp;
