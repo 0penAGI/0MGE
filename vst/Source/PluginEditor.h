@@ -152,56 +152,76 @@ public:
     void resized() override {}
 
     void timerCallback() override {
-        float plugW = (float)getWidth();
-        float vizTop = (float)vizY;
-        float vizHf = (float)this->vizH;
-
-        float freeze = *proc.apvts.getRawParameterValue("freeze");
+        float level = proc.audioLevel.load(std::memory_order_relaxed);
+        float density = *proc.apvts.getRawParameterValue("density");
         float scatter = *proc.apvts.getRawParameterValue("scatter");
+        float freeze = *proc.apvts.getRawParameterValue("freeze");
+
+        float plugW = (float)getWidth();
+        float plugH = (float)getHeight();
+
+        float vizCenterX = 12.0f + (plugW - 24.0f) * 0.5f;
+        float vizTop = (float)vizY;
+        float vizH = (float)this->vizH;
+
+        float audioEnergy = std::clamp(level * 8.0f, 0.0f, 1.0f);
         float freezeFactor = freeze > 0.5f ? (freeze - 0.5f) * 2.0f : 0.0f;
         float freezeDamp = 1.0f - freezeFactor * 0.3f;
 
+        float audioSpeed = (0.2f + audioEnergy * 3.0f + density * 0.3f) * freezeDamp;
+
+        float centroid = proc.getSynth().getCurrentCentroid();
+
+        // Grain presence gates everything
         GranularSynth::GrainInfo grainData[GranularSynth::MAX_GRAINS];
         int activeCount = proc.getSynth().getActiveGrains(grainData, GranularSynth::MAX_GRAINS);
-        float grainPresence = std::clamp((float)activeCount / 8.0f, 0.0f, 1.0f);
+        float grainPresence = std::clamp((float)activeCount / 6.0f, 0.0f, 1.0f);
 
-        for (int i = 0; i < NUM_PARTICLES; ++i) {
-            auto& pt = particles[i];
+        for (auto& pt : particles) {
+            pt.phase += (0.04f + audioEnergy * 0.08f) * freezeDamp;
 
-            if (i < activeCount) {
-                auto& g = grainData[i];
-                float panNorm = std::clamp((g.panL - g.panR + 1.0f) * 0.5f, 0.0f, 1.0f);
-                float targetX = 12.0f + panNorm * (plugW - 24.0f);
-                float targetY = vizTop + g.readPos01 * vizHf;
+            float homeX = 12.0f + pt.freqBand * (plugW - 24.0f);
+            float toHomeX = homeX - pt.x;
+            float pullX = 0.002f * freezeDamp;
+            pt.vx += toHomeX * pullX;
 
-                float jitterX = std::sin(pt.phase * 1.2f) * scatter * 5.0f * freezeDamp;
-                float jitterY = std::cos(pt.phase * 0.9f) * scatter * 4.0f * freezeDamp;
+            float toHomeY = pt.homeY * vizH + vizTop - pt.y;
+            float pullY = 0.001f * freezeDamp;
+            pt.vy += toHomeY * pullY;
 
-                pt.vx += (targetX - pt.x) * 0.05f + jitterX;
-                pt.vy += (targetY - pt.y) * 0.05f + jitterY;
-                pt.vx *= 0.9f;
-                pt.vy *= 0.9f;
-                pt.x += pt.vx;
-                pt.y += pt.vy;
-                pt.phase += 0.03f * std::abs(g.rate);
+            float jitterX = std::sin(pt.phase * 2.3f + pt.x * 0.01f) * scatter * audioEnergy * 3.0f * freezeDamp;
+            float jitterY = std::cos(pt.phase * 1.7f + pt.y * 0.01f) * scatter * audioEnergy * 2.5f * freezeDamp;
+            pt.vx += jitterX;
+            pt.vy += jitterY;
 
-                pt.currentSize = (1.5f + g.amp * 5.0f) * (0.3f + g.env * 0.7f);
-                pt.life = g.env;
-                pt.freqBand = std::clamp((std::abs(g.rate) - 0.25f) / 3.75f, 0.0f, 1.0f);
-            } else {
-                pt.life -= 0.08f * freezeDamp;
-                pt.currentSize *= 0.9f;
-                pt.x += pt.vx * 0.3f;
-                pt.y += pt.vy * 0.3f;
-                pt.vx *= 0.8f;
-                pt.vy *= 0.8f;
-            }
+            float damping = freeze > 0.5f ? 0.82f : 0.92f;
+            pt.vx *= damping;
+            pt.vy *= damping;
 
-            if (pt.life <= 0.0f) {
-                pt.x = -200.0f;
-                pt.y = -200.0f;
-                pt.currentSize = 0.0f;
-                pt.life = 0.0f;
+            pt.x += pt.vx;
+            pt.y += pt.vy;
+
+            float baseLifeDecay = (0.003f + audioEnergy * 0.004f) * freezeDamp;
+            pt.life -= baseLifeDecay;
+            if (freeze > 0.5f) pt.life += 0.004f;
+
+            // Size responds to grain presence, not just input
+            pt.currentSize = pt.size * (0.3f + grainPresence * 1.2f) * (0.7f + 0.3f * std::sin(pt.phase));
+            if (freeze > 0.5f) pt.currentSize *= (1.0f + freezeFactor * 0.3f);
+
+            if (pt.life <= 0.0f || pt.x < -80 || pt.x > plugW + 80 ||
+                pt.y < -80 || pt.y > plugH + 80) {
+                float spawnX = 12.0f + ((float)(std::rand() % 1000) / 1000.0f) * (plugW - 24.0f);
+                pt.freqBand = (float)(std::rand() % 1000) / 1000.0f;
+                pt.homeY = (float)(std::rand() % 1000) / 1000.0f;
+                float spawnY = vizTop + pt.homeY * vizH + ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * 30.0f;
+                pt.x = spawnX;
+                pt.y = spawnY;
+                pt.vx = ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * audioSpeed * 2.0f;
+                pt.vy = ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * audioSpeed * 1.5f;
+                pt.size = 1.5f + (float)(std::rand() % 1000) / 1000.0f * 4.0f;
+                pt.life = 0.5f + (float)(std::rand() % 1000) / 1000.0f * 0.5f;
+                pt.phase = (float)(std::rand() % 1000) / 1000.0f * 6.28f;
             }
         }
 
@@ -245,10 +265,16 @@ private:
     void drawParticles(juce::Graphics& g) {
         float freeze = *proc.apvts.getRawParameterValue("freeze");
         float freezeFactor = (freeze > 0.5f) ? (freeze - 0.5f) * 2.0f : 0.0f;
+        float level = proc.audioLevel.load(std::memory_order_relaxed);
+        float audioEnergy = std::clamp(level * 8.0f, 0.0f, 1.0f);
+
+        GranularSynth::GrainInfo grainData[GranularSynth::MAX_GRAINS];
+        int activeCount = proc.getSynth().getActiveGrains(grainData, GranularSynth::MAX_GRAINS);
+        float grainPresence = std::clamp((float)activeCount / 6.0f, 0.0f, 1.0f);
 
         for (auto& pt : particles) {
-            float alpha = std::clamp(pt.life, 0.0f, 1.0f);
-            if (alpha < 0.02f || pt.currentSize < 0.1f) continue;
+            float alpha = std::clamp(pt.life, 0.0f, 1.0f) * (0.15f + audioEnergy * 0.5f + grainPresence * 0.2f);
+            if (alpha < 0.02f) continue;
 
             float px = pt.x;
             float py = pt.y;
