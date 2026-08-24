@@ -153,60 +153,77 @@ public:
 
     void timerCallback() override {
         float plugW = (float)getWidth();
-        float plugH = (float)getHeight();
-
         float vizTop = (float)vizY;
         float vizHf = (float)this->vizH;
 
         float freeze = *proc.apvts.getRawParameterValue("freeze");
+        float scatter = *proc.apvts.getRawParameterValue("scatter");
+        float density = *proc.apvts.getRawParameterValue("density");
         float freezeFactor = freeze > 0.5f ? (freeze - 0.5f) * 2.0f : 0.0f;
         float freezeDamp = 1.0f - freezeFactor * 0.3f;
 
-        // Fetch actual grain data from engine
         GranularSynth::GrainInfo grainData[GranularSynth::MAX_GRAINS];
         int activeCount = proc.getSynth().getActiveGrains(grainData, GranularSynth::MAX_GRAINS);
+        float grainPresence = std::clamp((float)activeCount / 8.0f, 0.0f, 1.0f);
 
         for (int i = 0; i < NUM_PARTICLES; ++i) {
             auto& pt = particles[i];
-            if (i < activeCount) {
-                auto& g = grainData[i];
-                // Grain is alive — drive particle from grain state
+            pt.phase += (0.04f + grainPresence * 0.06f) * freezeDamp;
 
-                // X = pan position (left=0..1=right), spread across viz width
-                float panCenter = (g.panL + g.panR); // 0..~1.4
+            if (i < activeCount) {
+                // Grain-driven particle — anchored to grain state
+                auto& g = grainData[i];
                 float panNorm = std::clamp((g.panL - g.panR + 1.0f) * 0.5f, 0.0f, 1.0f);
                 float targetX = 12.0f + panNorm * (plugW - 24.0f);
-
-                // Y = readPos01 within grain (top=start, bottom=end)
                 float targetY = vizTop + g.readPos01 * vizHf;
 
-                pt.vx += (targetX - pt.x) * 0.15f * freezeDamp;
-                pt.vy += (targetY - pt.y) * 0.15f * freezeDamp;
-                pt.vx *= 0.85f;
-                pt.vy *= 0.85f;
+                float jitterX = std::sin(pt.phase * 2.3f + pt.x * 0.01f) * scatter * 8.0f * freezeDamp;
+                float jitterY = std::cos(pt.phase * 1.7f + pt.y * 0.01f) * scatter * 6.0f * freezeDamp;
+
+                pt.vx += (targetX - pt.x) * 0.08f + jitterX;
+                pt.vy += (targetY - pt.y) * 0.08f + jitterY;
+                pt.vx *= 0.88f;
+                pt.vy *= 0.88f;
                 pt.x += pt.vx;
                 pt.y += pt.vy;
 
-                // Size = envelope * amplitude
                 pt.currentSize = (1.5f + g.amp * 5.0f) * (0.3f + g.env * 0.7f);
-
-                // Life = envelope (drives alpha in drawParticles)
-                pt.life = g.env;
-
-                // Phase for glow animation
-                pt.phase += 0.06f * std::abs(g.rate);
-
-                // Color = rate determines hue band
+                pt.life = std::max(pt.life, g.env);
                 pt.freqBand = std::clamp((std::abs(g.rate) - 0.25f) / 3.75f, 0.0f, 1.0f);
             } else {
-                // Grain inactive — fade particle out
-                pt.life -= 0.05f * freezeDamp;
-                if (pt.life <= 0.0f) {
-                    // Hidden off-screen until reactivated
-                    pt.x = -100.0f;
-                    pt.y = -100.0f;
-                    pt.currentSize = 0.0f;
-                }
+                // Ambient particle — gentle drift, fades when no grains
+                float homeX = 12.0f + pt.freqBand * (plugW - 24.0f);
+                float toHomeX = homeX - pt.x;
+                float toHomeY = pt.homeY * vizHf + vizTop - pt.y;
+
+                float jitterX = std::sin(pt.phase * 2.3f + pt.x * 0.01f) * scatter * 3.0f * freezeDamp;
+                float jitterY = std::cos(pt.phase * 1.7f + pt.y * 0.01f) * scatter * 2.5f * freezeDamp;
+
+                pt.vx += toHomeX * 0.002f + jitterX;
+                pt.vy += toHomeY * 0.001f + jitterY;
+                pt.vx *= 0.92f;
+                pt.vy *= 0.92f;
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+
+                pt.life -= 0.015f * freezeDamp;
+                pt.currentSize *= 0.95f;
+            }
+
+            if (freeze > 0.5f) pt.life += 0.004f;
+
+            if (pt.life <= 0.0f || pt.x < -80 || pt.x > plugW + 80 ||
+                pt.y < -80 || pt.y > vizTop + vizHf + 80) {
+                pt.x = 12.0f + ((float)(std::rand() % 1000) / 1000.0f) * (plugW - 24.0f);
+                pt.freqBand = (float)(std::rand() % 1000) / 1000.0f;
+                pt.homeY = (float)(std::rand() % 1000) / 1000.0f;
+                pt.y = vizTop + pt.homeY * vizHf;
+                pt.vx = ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * 2.0f;
+                pt.vy = ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * 1.5f;
+                pt.size = 1.5f + (float)(std::rand() % 1000) / 1000.0f * 4.0f;
+                pt.currentSize = pt.size;
+                pt.life = 0.3f + (float)(std::rand() % 1000) / 1000.0f * 0.5f;
+                pt.phase = (float)(std::rand() % 1000) / 1000.0f * 6.28f;
             }
         }
 
@@ -228,7 +245,7 @@ private:
     struct Particle {
         float x, y, vx, vy, size, currentSize, life, phase, freqBand, homeY;
     };
-    static constexpr int NUM_PARTICLES = GranularSynth::MAX_GRAINS;
+    static constexpr int NUM_PARTICLES = 80;
     std::array<Particle, NUM_PARTICLES> particles{};
 
     void resetParticle(Particle& pt, bool randomPos) {
