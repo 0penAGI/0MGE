@@ -105,16 +105,16 @@ public:
 
         float rate = std::clamp(pitchRate * paramStretch, 0.25f, 4.0f);
 
+        for (auto& v : voices) {
+            if (!v.active) continue;
+            renderVoice(v, outL, outR, numSamples, circLen);
+        }
+
         while (nextSpawnSample < numSamples) {
             spawnVoices(nextSpawnSample, baseGrainSamples, rate, circLen, bufAvail);
             nextSpawnSample += hopSamples;
         }
         nextSpawnSample -= numSamples;
-
-        for (auto& v : voices) {
-            if (!v.active) continue;
-            renderVoice(v, outL, outR, numSamples, circLen);
-        }
 
         float normFactor = 0.25f / std::max(1.0f, paramDensity);
 
@@ -172,7 +172,6 @@ private:
         float envPhase;
         float envInc;
         int samplesLeft;
-        int blockOffset;
         bool active;
         bool reverse;
     };
@@ -329,16 +328,13 @@ private:
             v->envPhase = 0.0f;
             v->envInc = 1.0f / (float)readLen;
             v->samplesLeft = readLen;
-            v->blockOffset = sampleOffset;
             v->active = true;
             v->reverse = revDist(rng) < paramReverse;
         }
     }
 
     void renderVoice(GrainVoice& v, float* outL, float* outR, int numSamples, int circLen) {
-        int start = v.blockOffset;
-        v.blockOffset = 0;
-        for (int i = start; i < numSamples && v.active; ++i) {
+        for (int i = 0; i < numSamples && v.active; ++i) {
             float env = 0.5f - 0.5f * std::cos(6.2831853f * v.envPhase);
 
             float srcPos = v.reverse ? (float)v.samplesLeft - v.readPos : v.readPos;
