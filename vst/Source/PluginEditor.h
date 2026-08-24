@@ -152,7 +152,7 @@ public:
     void resized() override {}
 
     void timerCallback() override {
-        float level = proc.audioLevel.load(std::memory_order_relaxed);
+        float level = proc.grainLevel.load(std::memory_order_relaxed);
         float density = *proc.apvts.getRawParameterValue("density");
         float scatter = *proc.apvts.getRawParameterValue("scatter");
         float freeze = *proc.apvts.getRawParameterValue("freeze");
@@ -261,7 +261,7 @@ private:
     }
 
     void drawParticles(juce::Graphics& g) {
-        float level = proc.audioLevel.load(std::memory_order_relaxed);
+        float level = proc.grainLevel.load(std::memory_order_relaxed);
         float audioEnergy = std::clamp(level * 8.0f, 0.0f, 1.0f);
         float freeze = *proc.apvts.getRawParameterValue("freeze");
 

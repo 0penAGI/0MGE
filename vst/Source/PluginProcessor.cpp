@@ -94,15 +94,19 @@ void ZeroGrainProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mi
 
     float sum = 0.0f;
     float peak = 0.0f;
+    float gSum = 0.0f;
     for (int i = 0; i < numSamples; ++i) {
         float absL = std::abs(inL[i]);
         float absR = std::abs(inR[i]);
         float m = std::max(absL, absR);
         sum += inL[i] * inL[i] + inR[i] * inR[i];
+        gSum += outL[i] * outL[i] + outR[i] * outR[i];
         if (m > peak) peak = m;
     }
     float rms = std::sqrt(sum / (numSamples * 2) + 1e-10f);
+    float gRms = std::sqrt(gSum / (numSamples * 2) + 1e-10f);
     audioLevel.store(rms, std::memory_order_relaxed);
+    grainLevel.store(gRms, std::memory_order_relaxed);
     if (peak > peakHold) peakHold = peak;
     else peakHold *= 0.995f;
     audioPeak.store(peakHold, std::memory_order_relaxed);

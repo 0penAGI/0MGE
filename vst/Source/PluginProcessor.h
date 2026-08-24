@@ -36,6 +36,7 @@ public:
 
     std::atomic<float> audioLevel{0.0f};
     std::atomic<float> audioPeak{0.0f};
+    std::atomic<float> grainLevel{0.0f};
 
 private:
     GranularSynth synth;
