@@ -30,6 +30,8 @@ public:
         }
         nextSpawnSample = 0;
         freezeLP_L = freezeLP_R = 0.0f;
+        smoothStretch = 1.0f;
+        smoothSize = paramSize;
 
         // Spectral analysis for visualization
         visWindow.resize(VIS_FFT_SIZE);
@@ -94,16 +96,20 @@ public:
         if (bufAvail < 512) return;
 
         float pitchRate = std::pow(2.0f, paramPitch / 12.0f);
-        float minSizeMs = 30.0f + paramSize * 50.0f;
-        float maxSizeMs = minSizeMs + 80.0f + paramSize * 220.0f;
+
+        smoothStretch += (paramStretch - smoothStretch) * 0.05f;
+        smoothSize    += (paramSize    - smoothSize)    * 0.05f;
+
+        float minSizeMs = 30.0f + smoothSize * 50.0f;
+        float maxSizeMs = minSizeMs + 80.0f + smoothSize * 220.0f;
         float baseGrainMs = (minSizeMs + maxSizeMs) * 0.5f;
         int baseGrainSamples = (int)(baseGrainMs * inputSR / 1000.0f);
         baseGrainSamples = std::max(256, std::min(baseGrainSamples, circLen / 4));
 
-        int hopSamples = baseGrainSamples / 2;
-        hopSamples = std::max(64, hopSamples);
+        int hopSamples = baseGrainSamples / 4;
+        hopSamples = std::max(32, hopSamples);
 
-        float rate = std::clamp(pitchRate * paramStretch, 0.25f, 4.0f);
+        float rate = std::clamp(pitchRate * smoothStretch, 0.25f, 4.0f);
 
         while (nextSpawnSample < numSamples) {
             spawnVoices(nextSpawnSample, baseGrainSamples, rate, circLen, bufAvail);
@@ -211,6 +217,9 @@ private:
     float paramScatter = 0.0f;
     float paramFreeze = 0.0f;
     float paramFocus = 0.5f;
+
+    float smoothStretch = 1.0f;
+    float smoothSize = 0.5f;
 
     std::mt19937 rng;
 
