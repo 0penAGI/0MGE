@@ -197,22 +197,27 @@ public:
             pt.x += pt.vx;
             pt.y += pt.vy;
 
-            // Life: only grows when grains exist, decays otherwise
+            // Life: only grows when grains exist, dies fast otherwise
             if (grainPresence > 0.01f) {
                 float lifeGain = 0.02f * grainPresence * freezeDamp;
                 pt.life = std::min(pt.life + lifeGain, 1.0f);
             } else {
-                pt.life -= 0.03f * freezeDamp;
+                pt.life -= 0.15f * freezeDamp;
             }
             if (freeze > 0.5f) pt.life = std::min(pt.life + 0.004f, 1.0f);
 
             // Smooth size ramp — lerp toward target, never jump
-            float targetSize = pt.size * (0.3f + grainPresence * 1.2f) * (0.7f + 0.3f * std::sin(pt.phase));
+            float targetSize = grainPresence > 0.01f
+                ? pt.size * (0.3f + grainPresence * 1.2f) * (0.7f + 0.3f * std::sin(pt.phase))
+                : 0.0f;
             if (freeze > 0.5f) targetSize *= (1.0f + freezeFactor * 0.3f);
             pt.currentSize += (targetSize - pt.currentSize) * 0.08f;
 
-            if (pt.life <= 0.0f || pt.x < -80 || pt.x > plugW + 80 ||
-                pt.y < -80 || pt.y > plugH + 80) {
+            bool dead = pt.life <= 0.0f;
+            bool oob = pt.x < -80 || pt.x > plugW + 80 || pt.y < -80 || pt.y > plugH + 80;
+
+            if (dead || oob) {
+                if (grainPresence < 0.01f) continue;
                 float spawnX = 12.0f + ((float)(std::rand() % 1000) / 1000.0f) * (plugW - 24.0f);
                 pt.freqBand = (float)(std::rand() % 1000) / 1000.0f;
                 pt.homeY = (float)(std::rand() % 1000) / 1000.0f;
@@ -223,7 +228,7 @@ public:
                 pt.vy = ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * audioSpeed * 1.5f;
                 pt.size = 1.5f + (float)(std::rand() % 1000) / 1000.0f * 4.0f;
                 pt.currentSize = 0.0f;
-                pt.life = 0.0f;
+                pt.life = 0.01f;
                 pt.phase = (float)(std::rand() % 1000) / 1000.0f * 6.28f;
             }
         }
