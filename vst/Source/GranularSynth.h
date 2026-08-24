@@ -171,7 +171,7 @@ private:
         float panL, panR;
         float envPhase;
         float envInc;
-        int samplesLeft;
+        int grainLen;
         int blockOffset;
         bool active;
         bool reverse;
@@ -332,7 +332,7 @@ private:
             v->panR = std::sin((pan + 1.0f) * 3.14159265f * 0.25f);
             v->envPhase = 0.0f;
             v->envInc = 1.0f / (float)readLen;
-            v->samplesLeft = readLen;
+            v->grainLen = readLen;
             v->blockOffset = sampleOffset;
             v->active = true;
             v->reverse = revDist(rng) < paramReverse;
@@ -352,7 +352,7 @@ private:
         for (int i = start; i < numSamples && v.active; ++i) {
             float env = 0.5f - 0.5f * std::cos(6.2831853f * v.envPhase);
 
-            float srcPos = v.reverse ? (float)v.samplesLeft - v.readPos : v.readPos;
+            float srcPos = v.reverse ? (float)v.grainLen - v.readPos : v.readPos;
             float historyOffset = v.readOffset + srcPos;
             int offset0 = (int)std::floor(historyOffset);
             float frac = historyOffset - (float)offset0;
@@ -367,9 +367,8 @@ private:
 
             v.readPos += std::abs(v.rate);
             v.envPhase += v.envInc;
-            v.samplesLeft--;
 
-            if (v.envPhase >= 1.0f || v.samplesLeft <= 0)
+            if (v.envPhase >= 1.0f || v.readPos >= (float)v.grainLen)
                 v.active = false;
         }
     }
