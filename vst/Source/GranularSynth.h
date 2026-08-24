@@ -306,8 +306,12 @@ private:
 
             int maxStart = std::max(0, bufAvail - readLen - 4);
             if (maxStart < 0) continue;
-            std::uniform_int_distribution<int> posDist(0, maxStart);
-            int startPos = posDist(rng);
+
+            int headPos = (circWrite - readLen - 4 + circLen * 4) % circLen;
+            headPos = std::min(headPos, maxStart);
+            int scatterRadius = (int)(maxStart * paramScatter);
+            std::uniform_int_distribution<int> posDist(-scatterRadius, scatterRadius);
+            int startPos = std::clamp(headPos + posDist(rng), 0, maxStart);
 
             float localRate = baseRate;
             if (paramScatter > 0.05f)
