@@ -173,6 +173,7 @@ private:
         float envInc;
         int grainLen;
         int blockOffset;
+        int spawnCircWrite;
         bool active;
         bool reverse;
     };
@@ -333,6 +334,7 @@ private:
             v->envPhase = 0.0f;
             v->envInc = 1.0f / (float)readLen;
             v->grainLen = readLen;
+            v->spawnCircWrite = circWrite;
             v->blockOffset = sampleOffset;
             v->active = true;
             v->reverse = revDist(rng) < paramReverse;
@@ -344,7 +346,7 @@ private:
         v.blockOffset = 0;
 
         auto safeRead = [&](int offset) -> float {
-            int idx = circWrite - 1 - offset;
+            int idx = v.spawnCircWrite - 1 - offset;
             idx = ((idx % circLen) + circLen) % circLen;
             return circBuf[idx];
         };
