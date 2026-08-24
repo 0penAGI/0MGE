@@ -204,8 +204,9 @@ public:
             pt.life -= baseLifeDecay;
             if (freeze > 0.5f) pt.life += 0.004f;
 
-            pt.currentSize = pt.size * (0.5f + audioEnergy * 1.5f) * (0.7f + 0.3f * std::sin(pt.phase));
-            if (freeze > 0.5f) pt.currentSize *= (1.0f + freezeFactor * 0.3f);
+            float targetSize = pt.size * (0.5f + audioEnergy * 1.5f) * (0.7f + 0.3f * std::sin(pt.phase));
+            if (freeze > 0.5f) targetSize *= (1.0f + freezeFactor * 0.3f);
+            pt.currentSize += (targetSize - pt.currentSize) * 0.1f;
 
             if (pt.life <= 0.0f || pt.x < -80 || pt.x > plugW + 80 ||
                 pt.y < -80 || pt.y > plugH + 80) {
