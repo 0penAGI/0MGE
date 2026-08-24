@@ -7,6 +7,7 @@
 
 class GranularSynth {
 public:
+    static constexpr int MAX_VOICES = 32;
     GranularSynth() : rng(std::random_device{}()) {}
 
     void prepare(double sampleRate) {
@@ -166,8 +167,30 @@ public:
         return circBuf[idx];
     }
 
+    struct GrainInfo {
+        float env;       // 0..1 envelope value
+        float amp;       // grain amplitude
+        float panL, panR;
+        float readPos01; // normalized position within grain (0..1)
+        float rate;
+        bool active;
+    };
+
+    static constexpr int MAX_GRAINS = MAX_VOICES;
+
+    int getActiveGrains(GrainInfo* out, int maxOut) const {
+        int n = 0;
+        for (auto& v : voices) {
+            if (!v.active || n >= maxOut) continue;
+            float env = 0.5f - 0.5f * std::cos(6.2831853f * v.envPhase);
+            float progress = (v.grainLen > 0) ? v.readPos / (float)v.grainLen : 0.0f;
+            out[n++] = { env, v.amp, v.panL, v.panR,
+                         std::clamp(progress, 0.0f, 1.0f), v.rate, true };
+        }
+        return n;
+    }
+
 private:
-    static constexpr int MAX_VOICES = 32;
 
     struct GrainVoice {
         float readPos;

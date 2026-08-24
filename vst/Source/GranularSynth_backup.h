@@ -105,16 +105,16 @@ public:
 
         float rate = std::clamp(pitchRate * paramStretch, 0.25f, 4.0f);
 
-        for (auto& v : voices) {
-            if (!v.active) continue;
-            renderVoice(v, outL, outR, numSamples, circLen);
-        }
-
         while (nextSpawnSample < numSamples) {
             spawnVoices(nextSpawnSample, baseGrainSamples, rate, circLen, bufAvail);
             nextSpawnSample += hopSamples;
         }
         nextSpawnSample -= numSamples;
+
+        for (auto& v : voices) {
+            if (!v.active) continue;
+            renderVoice(v, outL, outR, numSamples, circLen);
+        }
 
         float normFactor = 0.25f / std::max(1.0f, paramDensity);
 
@@ -171,7 +171,9 @@ private:
         float panL, panR;
         float envPhase;
         float envInc;
-        int samplesLeft;
+        int grainLen;
+        int blockOffset;
+        int spawnCircWrite;
         bool active;
         bool reverse;
     };
@@ -305,8 +307,12 @@ private:
 
             int maxStart = std::max(0, bufAvail - readLen - 4);
             if (maxStart < 0) continue;
-            std::uniform_int_distribution<int> posDist(0, maxStart);
-            int startPos = posDist(rng);
+
+            int headPos = (circWrite - readLen - 4 + circLen * 4) % circLen;
+            headPos = std::min(headPos, maxStart);
+            int scatterRadius = (int)(maxStart * paramScatter);
+            std::uniform_int_distribution<int> posDist(-scatterRadius, scatterRadius);
+            int startPos = std::clamp(headPos + posDist(rng), 0, maxStart);
 
             float localRate = baseRate;
             if (paramScatter > 0.05f)
@@ -327,28 +333,34 @@ private:
             v->panR = std::sin((pan + 1.0f) * 3.14159265f * 0.25f);
             v->envPhase = 0.0f;
             v->envInc = 1.0f / (float)readLen;
-            v->samplesLeft = readLen;
+            v->grainLen = readLen;
+            v->spawnCircWrite = circWrite;
+            v->blockOffset = sampleOffset;
             v->active = true;
             v->reverse = revDist(rng) < paramReverse;
         }
     }
 
     void renderVoice(GrainVoice& v, float* outL, float* outR, int numSamples, int circLen) {
-        for (int i = 0; i < numSamples && v.active; ++i) {
+        int start = std::min(v.blockOffset, numSamples - 1);
+        v.blockOffset = 0;
+
+        auto safeRead = [&](int offset) -> float {
+            int idx = v.spawnCircWrite - 1 - offset;
+            idx = ((idx % circLen) + circLen) % circLen;
+            return circBuf[idx];
+        };
+
+        for (int i = start; i < numSamples && v.active; ++i) {
             float env = 0.5f - 0.5f * std::cos(6.2831853f * v.envPhase);
 
-            float srcPos = v.reverse ? (float)v.samplesLeft - v.readPos : v.readPos;
+            float srcPos = v.reverse ? (float)v.grainLen - v.readPos : v.readPos;
             float historyOffset = v.readOffset + srcPos;
             int offset0 = (int)std::floor(historyOffset);
             float frac = historyOffset - (float)offset0;
 
-            int readIdx = ((circWrite - 1 - offset0) % circLen + circLen * 4) % circLen;
-            int readIdx2 = ((circWrite - 1 - offset0 - 1) % circLen + circLen * 4) % circLen;
-            readIdx = (readIdx % circLen + circLen) % circLen;
-            readIdx2 = (readIdx2 % circLen + circLen) % circLen;
-
-            float s0 = circBuf[readIdx];
-            float s1 = circBuf[readIdx2];
+            float s0 = safeRead(offset0);
+            float s1 = safeRead(offset0 + 1);
             float sample = s0 + (s1 - s0) * frac;
 
             float out = sample * env * v.amp;
@@ -357,9 +369,8 @@ private:
 
             v.readPos += std::abs(v.rate);
             v.envPhase += v.envInc;
-            v.samplesLeft--;
 
-            if (v.envPhase >= 1.0f || v.samplesLeft <= 0)
+            if (v.envPhase >= 1.0f || v.readPos >= (float)v.grainLen)
                 v.active = false;
         }
     }
