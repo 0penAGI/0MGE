@@ -158,7 +158,6 @@ public:
 
         float freeze = *proc.apvts.getRawParameterValue("freeze");
         float scatter = *proc.apvts.getRawParameterValue("scatter");
-        float density = *proc.apvts.getRawParameterValue("density");
         float freezeFactor = freeze > 0.5f ? (freeze - 0.5f) * 2.0f : 0.0f;
         float freezeDamp = 1.0f - freezeFactor * 0.3f;
 
@@ -168,62 +167,41 @@ public:
 
         for (int i = 0; i < NUM_PARTICLES; ++i) {
             auto& pt = particles[i];
-            pt.phase += (0.04f + grainPresence * 0.06f) * freezeDamp;
 
             if (i < activeCount) {
-                // Grain-driven particle — anchored to grain state
                 auto& g = grainData[i];
                 float panNorm = std::clamp((g.panL - g.panR + 1.0f) * 0.5f, 0.0f, 1.0f);
                 float targetX = 12.0f + panNorm * (plugW - 24.0f);
                 float targetY = vizTop + g.readPos01 * vizHf;
 
-                float jitterX = std::sin(pt.phase * 2.3f + pt.x * 0.01f) * scatter * 8.0f * freezeDamp;
-                float jitterY = std::cos(pt.phase * 1.7f + pt.y * 0.01f) * scatter * 6.0f * freezeDamp;
+                float jitterX = std::sin(pt.phase * 1.2f) * scatter * 5.0f * freezeDamp;
+                float jitterY = std::cos(pt.phase * 0.9f) * scatter * 4.0f * freezeDamp;
 
-                pt.vx += (targetX - pt.x) * 0.08f + jitterX;
-                pt.vy += (targetY - pt.y) * 0.08f + jitterY;
-                pt.vx *= 0.88f;
-                pt.vy *= 0.88f;
+                pt.vx += (targetX - pt.x) * 0.05f + jitterX;
+                pt.vy += (targetY - pt.y) * 0.05f + jitterY;
+                pt.vx *= 0.9f;
+                pt.vy *= 0.9f;
                 pt.x += pt.vx;
                 pt.y += pt.vy;
+                pt.phase += 0.03f * std::abs(g.rate);
 
                 pt.currentSize = (1.5f + g.amp * 5.0f) * (0.3f + g.env * 0.7f);
-                pt.life = std::max(pt.life, g.env);
+                pt.life = g.env;
                 pt.freqBand = std::clamp((std::abs(g.rate) - 0.25f) / 3.75f, 0.0f, 1.0f);
             } else {
-                // Ambient particle — gentle drift, fades when no grains
-                float homeX = 12.0f + pt.freqBand * (plugW - 24.0f);
-                float toHomeX = homeX - pt.x;
-                float toHomeY = pt.homeY * vizHf + vizTop - pt.y;
-
-                float jitterX = std::sin(pt.phase * 2.3f + pt.x * 0.01f) * scatter * 3.0f * freezeDamp;
-                float jitterY = std::cos(pt.phase * 1.7f + pt.y * 0.01f) * scatter * 2.5f * freezeDamp;
-
-                pt.vx += toHomeX * 0.002f + jitterX;
-                pt.vy += toHomeY * 0.001f + jitterY;
-                pt.vx *= 0.92f;
-                pt.vy *= 0.92f;
-                pt.x += pt.vx;
-                pt.y += pt.vy;
-
-                pt.life -= 0.015f * freezeDamp;
-                pt.currentSize *= 0.95f;
+                pt.life -= 0.08f * freezeDamp;
+                pt.currentSize *= 0.9f;
+                pt.x += pt.vx * 0.3f;
+                pt.y += pt.vy * 0.3f;
+                pt.vx *= 0.8f;
+                pt.vy *= 0.8f;
             }
 
-            if (freeze > 0.5f) pt.life += 0.004f;
-
-            if (pt.life <= 0.0f || pt.x < -80 || pt.x > plugW + 80 ||
-                pt.y < -80 || pt.y > vizTop + vizHf + 80) {
-                pt.x = 12.0f + ((float)(std::rand() % 1000) / 1000.0f) * (plugW - 24.0f);
-                pt.freqBand = (float)(std::rand() % 1000) / 1000.0f;
-                pt.homeY = (float)(std::rand() % 1000) / 1000.0f;
-                pt.y = vizTop + pt.homeY * vizHf;
-                pt.vx = ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * 2.0f;
-                pt.vy = ((float)(std::rand() % 1000) / 1000.0f - 0.5f) * 1.5f;
-                pt.size = 1.5f + (float)(std::rand() % 1000) / 1000.0f * 4.0f;
-                pt.currentSize = pt.size;
-                pt.life = 0.3f + (float)(std::rand() % 1000) / 1000.0f * 0.5f;
-                pt.phase = (float)(std::rand() % 1000) / 1000.0f * 6.28f;
+            if (pt.life <= 0.0f) {
+                pt.x = -200.0f;
+                pt.y = -200.0f;
+                pt.currentSize = 0.0f;
+                pt.life = 0.0f;
             }
         }
 
