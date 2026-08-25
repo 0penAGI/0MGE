@@ -342,7 +342,7 @@ private:
 
             int headPos = (circWrite - readLen - 4 + circLen * 4) % circLen;
             headPos = std::min(headPos, maxStart);
-            int scatterRadius = (int)(maxStart * paramScatter);
+            int scatterRadius = (int)(readLen * paramScatter * 0.5f);
             std::uniform_int_distribution<int> posDist(-scatterRadius, scatterRadius);
             int startPos = std::clamp(headPos + posDist(rng), 0, maxStart);
 
