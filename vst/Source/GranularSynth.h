@@ -93,7 +93,7 @@ public:
         std::fill(mixBufR.begin(), mixBufR.begin() + numSamples, 0.0f);
 
         int circLen = (int)circBuf.size();
-        int bufAvail = bufferedSamples;
+        int bufAvail = std::min(bufferedSamples, (int)(inputSR * 3.0f));
         if (bufAvail < 512) return;
 
         float pitchRate = std::pow(2.0f, paramPitch / 12.0f);
