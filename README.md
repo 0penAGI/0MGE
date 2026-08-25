@@ -124,6 +124,33 @@ Takes incoming audio from your DAW and chops it into grains in real time. Each g
 
 **32 voices**, COLA Hanning envelope (click-free), circular buffer (10s at 48kHz).
 
+#### Install on macOS (easiest)
+
+1. Download [`0MGE-1.0.0-macOS.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
+2. Double-click the `.pkg` file
+3. Pick **VST3 + AU Plugin** and/or **Standalone App**
+4. Enter your admin password
+5. Restart your DAW — 0MGE appears in your plugin list
+
+#### Install manually (no installer)
+
+Download, unzip, copy to your DAW's plugin folder:
+
+```bash
+# VST3
+cp -R 0MGE.vst3 ~/Library/Audio/Plug-Ins/VST3/
+
+# AU (Logic)
+cp -R 0MGE.component ~/Library/Audio/Plug-Ins/Components/
+
+# Standalone
+cp -R 0MGE.app /Applications/
+```
+
+Restart your DAW after copying. Uninstall: delete the files above.
+
+#### Build from source
+
 ```bash
 cd vst && mkdir build && cd build
 cmake -G Xcode .. && cmake --build . --config Release
@@ -186,8 +213,8 @@ INT8 navigator only (grain pool stays INT16):
 
 | Platform | File | Install |
 |----------|------|---------|
-| macOS | [0MGE-1.0.0-macOS.pkg](release/macos/0MGE-1.0.0-macOS.pkg) (8.6 MB) | Double-click → admin password → done |
-| Windows | `0MGE_setup.exe` | Coming soon (GitHub Actions builds it) |
+| macOS | [0MGE-1.0.0-macOS.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) (8.6 MB) | Double-click → pick components → admin password → done |
+| Windows | `0MGE_setup.exe` | Coming soon |
 
 ### Manual Install (no installer needed)
 
