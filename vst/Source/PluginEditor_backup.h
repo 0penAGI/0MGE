@@ -152,7 +152,7 @@ public:
     void resized() override {}
 
     void timerCallback() override {
-        float level = proc.audioLevel.load(std::memory_order_relaxed);
+        float level = proc.grainLevel.load(std::memory_order_relaxed);
         float density = *proc.apvts.getRawParameterValue("density");
         float scatter = *proc.apvts.getRawParameterValue("scatter");
         float freeze = *proc.apvts.getRawParameterValue("freeze");
@@ -204,8 +204,9 @@ public:
             pt.life -= baseLifeDecay;
             if (freeze > 0.5f) pt.life += 0.004f;
 
-            pt.currentSize = pt.size * (0.5f + audioEnergy * 1.5f) * (0.7f + 0.3f * std::sin(pt.phase));
-            if (freeze > 0.5f) pt.currentSize *= (1.0f + freezeFactor * 0.3f);
+            float targetSize = pt.size * (0.5f + audioEnergy * 1.5f) * (0.7f + 0.3f * std::sin(pt.phase));
+            if (freeze > 0.5f) targetSize *= (1.0f + freezeFactor * 0.3f);
+            pt.currentSize += (targetSize - pt.currentSize) * 0.1f;
 
             if (pt.life <= 0.0f || pt.x < -80 || pt.x > plugW + 80 ||
                 pt.y < -80 || pt.y > plugH + 80) {
@@ -261,7 +262,7 @@ private:
     }
 
     void drawParticles(juce::Graphics& g) {
-        float level = proc.audioLevel.load(std::memory_order_relaxed);
+        float level = proc.grainLevel.load(std::memory_order_relaxed);
         float audioEnergy = std::clamp(level * 8.0f, 0.0f, 1.0f);
         float freeze = *proc.apvts.getRawParameterValue("freeze");
 

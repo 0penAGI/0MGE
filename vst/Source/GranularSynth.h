@@ -364,7 +364,8 @@ private:
             v->panL = std::cos((pan + 1.0f) * 3.14159265f * 0.25f);
             v->panR = std::sin((pan + 1.0f) * 3.14159265f * 0.25f);
             v->envPhase = 0.0f;
-            v->envInc = 1.0f / (float)readLen;
+            int iterLen = std::max(64, (int)((float)readLen / std::abs(localRate)));
+            v->envInc = 1.0f / (float)iterLen;
             v->grainLen = readLen;
             v->spawnCircWrite = circWrite;
             v->blockOffset = sampleOffset;
@@ -402,7 +403,7 @@ private:
             v.readPos += std::abs(v.rate);
             v.envPhase += v.envInc;
 
-            if (v.envPhase >= 1.0f || v.readPos >= (float)v.grainLen)
+            if (v.envPhase >= 1.0f)
                 v.active = false;
         }
     }
