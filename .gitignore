@@ -14,7 +14,8 @@ app_settings.json
 *.pth
 vst/test_sine
 vst/test_sine_output.wav
-release/macos/
+release/macos/0MGE.component
+release/macos/0MGE.vst3
 genome.json
 genome_filelist.json
 genome_test_info.json
