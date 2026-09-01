@@ -27,6 +27,12 @@ It's NOT text-to-music. It doesn't generate beats or songs. It learns the sonic 
 
 ## Quick Start
 
+> **Storage: no gigabytes in normal use.** 0MGE reads your music files **in place**
+> (it never copies your library) and caches compact grain features — a **~64 MB**
+> file. Training on your own music produces a ~64 MB pool + a ~5 MB model. The 4.9 GB
+> `granular_pool_v2_int16.npz` is a **pre-baked example** that we publish only so you
+> can hear 0MGE without training anything — you never need it for your own sounds.
+
 ### Option 0: Audio + Cover Art (Dual Brain)
 
 Generate a track with its album cover, **embedded into the WAV**:
@@ -58,16 +64,12 @@ pip install numpy torch librosa scikit-learn soundfile
 python3 granular_field.py --bars 60 --multi-stream
 ```
 
-### Option 3: Demo (pre-trained pool, optional)
+### Option 3: Demo — listen without training (our pre-baked example)
 
-> 0MGE works from **your** music — it scans, extracts grains and trains its own
-> navigator on first run (the desktop app does this in one click). Training on your
-> own folder produces small local files: a **~64 MB** feature pool + a **~5 MB**
-> model. No gigabytes.
->
-> The pre-trained demo below is an **extra**, only if you want to test-drive the
-> engine without training on anything. The 4.9 GB pool exists **solely** for that
-> instant demo — your own trainings never touch those sizes.
+> This is **our baked example**, not a dependency. When you train on your own music
+> you get a ~64 MB pool + ~5 MB model, never gigabytes. The 4.9 GB pool exists only
+> because it has the audio **baked in** — we published it so you can hear 0MGE
+> without training on anything. Skip it if you're using your own library.
 
 ```bash
 # 1. Install dependencies
