@@ -60,10 +60,14 @@ python3 granular_field.py --bars 60 --multi-stream
 
 ### Option 3: Demo (pre-trained pool, optional)
 
-> 0MGE works from **your** music with nothing to download — it scans, extracts
-> grains and trains its own navigator on first run (the desktop app does this in
-> one click). The pre-trained demo pool below is an extra: a ready-made 2389-track
-> library if you want to hear it before training on your own folder.
+> 0MGE works from **your** music — it scans, extracts grains and trains its own
+> navigator on first run (the desktop app does this in one click). Training on your
+> own folder produces small local files: a **~64 MB** feature pool + a **~5 MB**
+> model. No gigabytes.
+>
+> The pre-trained demo below is an **extra**, only if you want to test-drive the
+> engine without training on anything. The 4.9 GB pool exists **solely** for that
+> instant demo — your own trainings never touch those sizes.
 
 ```bash
 # 1. Install dependencies
@@ -284,12 +288,12 @@ Restart your DAW after copying. Uninstall: delete the files above.
 |------|------|-------------|
 | `granular_multi_v1.pt` | 5.3 MB | 6-stream navigator (audio) |
 | `granular_multi_v1_int8.npz` | 1.4 MB | Navigator INT8 quantized |
-| `granular_pool_v2_int16.npz` | 4.9 GB | Full grain pool (566K grains) |
-| `granular_pool_lite.npz` | 64 MB | Lite pool (features only) |
+| `granular_pool_v2_int16.npz` | 4.9 GB | Pre-trained demo pool ONLY — for listening without training |
+| `granular_pool_lite.npz` | 64 MB | Optional lite pool (features only) |
 
-> **Note:** these are optional — 0MGE trains its own audio navigator and visual head
-> from your music and pictures locally, no downloads required. The pre-trained files
-> above are just a ready-made demo library.
+> **Note:** the 4.9 GB pool is only for the no-training demo. When you train on your
+> **own** music, 0MGE builds a small local feature pool (~64 MB) and a **~5 MB**
+> model — no large files involved. The pre-trained files above are entirely optional.
 
 ### Demo Audio
 

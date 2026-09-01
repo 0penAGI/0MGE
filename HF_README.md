@@ -92,8 +92,12 @@ Example cover from the repo's visual layer (`--bars 8 --seed 5`):
 | `granular_multi_v1.pt` | 6.4 MB | FP32 6-stream navigator with attractor field |
 | `granular_multi_v1_int8.npz` | 1.6 MB | Navigator INT8 quantized (weights only, not the grain pool) |
 | `granular_multi_v1_int8_meta.json` | 0.4 KB | INT8 scale metadata |
-| `granular_pool_v2_int16.npz` | 5.8 GB | Full grain pool, 566K grains, INT16 with per-row peak normalization |
+| `granular_pool_v2_int16.npz` | 5.8 GB | Pre-trained demo pool ONLY — for listening without training |
 | `granular_pool_lite.npz` | 64 MB | Features only (22-dim), no raw audio |
+
+> **Note:** the big pool above exists **only** for the no-training demo. Training on
+> your own music builds a small local feature pool (~64 MB) + a ~6 MB model — no
+> gigabytes. The pre-trained files are entirely optional.
 
 ---
 
