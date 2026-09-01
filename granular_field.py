@@ -405,7 +405,7 @@ class MultiNavigator(nn.Module):
         # ── Visual head: same backbone, separate visual prediction ──────
         self.v_feat_enc = nn.Linear(vis_feat_dim, state_dim)
         self.v_cross = nn.MultiheadAttention(hidden, num_heads=2, batch_first=True)
-        self.v_stream_embed = nn.Parameter(torch.randn(1, 1, hidden) * 0.05)
+        self.v_stream_embed = nn.Parameter(torch.randn(1, n_streams, hidden) * 0.05)
         self.v_cluster_head = nn.Linear(hidden, vis_n_clusters)
         self.v_blend_head = nn.Sequential(nn.Linear(hidden, hidden // 2), nn.GELU(), nn.Linear(hidden // 2, 4), nn.Tanh())
 
@@ -457,7 +457,12 @@ class MultiNavigator(nn.Module):
             vz = self.proj(self.v_feat_enc(vis_states)) + self.pos[:, :vK, :]
             vz = self.transformer(vz)
             v_ctx = vz[:, -1, :]
-            vse = self.v_stream_embed.expand(B, -1, -1)
+            # mirror audio stream embedding indexing: each visual query uses
+            # its own stream's embedding so sub/drums/harmonic get distinct visuals
+            if isinstance(stream_idx, int) or (torch.is_tensor(stream_idx) and stream_idx.dim() == 0):
+                vse = self.v_stream_embed[:, int(stream_idx):int(stream_idx) + 1].expand(B, -1, -1)
+            else:
+                vse = self.v_stream_embed.squeeze(0)[stream_idx].unsqueeze(1)
             vcrossed, _ = self.v_cross(vse, vz, vz)
             v_h = (v_ctx + vcrossed.squeeze(1) + a_pull) / 3
 
@@ -1145,20 +1150,20 @@ class VisualEngine:
 
     def render(self, steps, canvas_size=VIS_CANVAS_SIZE):
         canvas = np.zeros((canvas_size, canvas_size, 3), dtype=np.float64)
-        wt = np.zeros((canvas_size, canvas_size), dtype=np.float64)
+        covered = np.zeros((canvas_size, canvas_size), dtype=bool)
 
+        # precompute patches so painter order can be scale-based (big grains
+        # behind, small detail on top)
+        resolved = []
         for s in steps:
             cluster = int(s["cluster"])
             grains = self.cluster_map.get(cluster, [])
-            if not grains: continue
+            if not grains:
+                continue
             ln, gi = grains[np.random.randint(len(grains))]
             patch = self.patches[ln][gi]
 
             size = self.sizes[ln]
-            pos_x = int(np.clip(s.get("pos_x", 0.5), 0, 1) * (canvas_size - size))
-            pos_y = int(np.clip(s.get("pos_y", 0.5), 0, 1) * (canvas_size - size))
-
-            # optional: scale the patch
             target_size = int(size * np.clip(s.get("scale", 1.0), 0.5, 3.0))
             target_size = max(target_size, 4)
             if target_size != size:
@@ -1173,42 +1178,50 @@ class VisualEngine:
             if hi - lo > 0.02:
                 patch = (patch - lo) / (hi - lo)
 
-            # alpha blending
-            alpha = float(np.clip(s.get("alpha", 0.5), 0.0, 1.0))
+            resolved.append({
+                "patch": patch,
+                "pos": (float(s.get("pos_x", 0.5)), float(s.get("pos_y", 0.5))),
+                "scale": target_size,
+                "alpha": float(np.clip(s.get("alpha", 0.5), 0.0, 1.0)),
+            })
+        if not resolved:
+            return Image.fromarray((canvas * 255).astype(np.uint8))
 
-            # bounds
-            end_y = min(pos_y + target_size, canvas_size)
-            end_x = min(pos_x + target_size, canvas_size)
+        resolved.sort(key=lambda r: r["scale"])
+
+        for r in resolved:
+            patch, (px, py), target_size, alpha = r["patch"], r["pos"], r["scale"], r["alpha"]
+            size = patch.shape[0]
+            pos_x = int(np.clip(px, 0, 1) * (canvas_size - size))
+            pos_y = int(np.clip(py, 0, 1) * (canvas_size - size))
+            end_y = min(pos_y + size, canvas_size)
+            end_x = min(pos_x + size, canvas_size)
             ph = end_y - pos_y
             pw = end_x - pos_x
-            if ph <= 0 or pw <= 0: continue
+            if ph <= 0 or pw <= 0:
+                continue
 
-            p_crop = patch[:ph, :pw]
-            canvas[pos_y:end_y, pos_x:end_x] += p_crop * alpha
-            wt[pos_y:end_y, pos_x:end_x] += alpha
-
-        # normalize where weighted
-        mask = wt > 1e-6
-        for c in range(3):
-            canvas[:,:,c] = np.where(mask, canvas[:,:,c] / np.maximum(wt, 1e-6), canvas[:,:,c])
+            src = patch[:ph, :pw]
+            dst = canvas[pos_y:end_y, pos_x:end_x]
+            # classic over compositing: dst = src*alpha + dst*(1-alpha)
+            canvas[pos_y:end_y, pos_x:end_x] = src * alpha + dst * (1.0 - alpha)
+            covered[pos_y:end_y, pos_x:end_x] = True
 
         # diagnostics (useful for debugging coverage/brightness)
         if os.environ.get("GF_VIS_DEBUG"):
-            print(f"   [render] mask_cov={mask.mean()*100:.1f}% placed_mean="
-                  f"{canvas[mask].mean(axis=0) if mask.any() else (0,0,0)}")
+            print(f"   [render] mask_cov={covered.mean()*100:.1f}% placed_mean="
+                  f"{canvas[covered].mean(axis=0) if covered.any() else (0,0,0)}")
 
-        # Fill unweighted (empty) regions with a soft dark base so the canvas
+        # Fill uncovered (empty) regions with a soft dark base so the canvas
         # is never pure black. Derived from the average of the placed grains
         # (dimmed), giving the composite a continuous "field" behind the grains.
-        placed = canvas[mask] if mask.any() else canvas.reshape(-1, 3)
+        placed = canvas[covered] if covered.any() else canvas.reshape(-1, 3)
         if len(placed) > 0:
             base = placed.mean(axis=0) * 0.35
         else:
             base = np.array([0.1, 0.1, 0.12])
-        filler = np.zeros_like(canvas)
-        filler[:,:,0] = base[0]; filler[:,:,1] = base[1]; filler[:,:,2] = base[2]
         for c in range(3):
-            canvas[:,:,c] = np.where(mask, canvas[:,:,c], filler[:,:,c])
+            canvas[:, :, c] = np.where(covered, canvas[:, :, c], base[c])
 
         canvas = np.clip(canvas * 255, 0, 255).astype(np.uint8)
         return Image.fromarray(canvas)
@@ -1645,14 +1658,18 @@ def generate_multi(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8,
                     gi = si * N_STREAMS + s_idx
                     hx = _halton(gi + 1, 2)
                     hy = _halton(gi + 1, 3)
-                    jx = float(np.clip(vb[0] * 0.5 + 0.5, 0, 1)) * 0.22 - 0.11
-                    jy = float(np.clip(vb[1] * 0.5 + 0.5, 0, 1)) * 0.22 - 0.11
+                    # wide brain-driven jitter: the stream's energy pulls grains off
+                    # the uniform Halton lattice, and jitter amplitude follows it.
+                    en = float(field.energy[s_idx]) if hasattr(field, "energy") else 0.0
+                    jamp = 0.22 + 0.28 * en
+                    jx = float(np.clip(vb[0] * 0.5 + 0.5, 0, 1)) * (2 * jamp) - jamp
+                    jy = float(np.clip(vb[1] * 0.5 + 0.5, 0, 1)) * (2 * jamp) - jamp
                     vis_steps.append({
                         "cluster": result["v_cluster"],
                         "pos_x": float(np.clip(hx + jx, 0, 1)),
                         "pos_y": float(np.clip(hy + jy, 0, 1)),
-                        "scale": float(np.clip(1.2 + vb[2] * 1.8, 0.5, 3.0)),
-                        "alpha": float(np.clip(vb[3] * 0.5 + 0.5, 0.05, 1.0)),
+                        "scale": float(np.clip(0.6 + vb[2] * 2.4, 0.5, 3.0)),
+                        "alpha": float(np.clip(0.2 + vb[3] * 0.6, 0.05, 0.9)),
                     })
 
             stream_steps[s_idx].append({
@@ -2035,9 +2052,15 @@ def main():
     model_ms = MultiNavigator().to(DEVICE)
     if os.path.exists(multi_model_path):
         print(f"📦 Loading multi-model: {multi_model_path}")
-        model_ms.load_state_dict(torch.load(multi_model_path, map_location=DEVICE, weights_only=False)["model_state"], strict=False)
+        sd = torch.load(multi_model_path, map_location=DEVICE, weights_only=False)["model_state"]
+        # legacy checkpoints have a single (1,1,h) v_stream_embed — broadcast it
+        # across all streams so per-stream visual conditioning starts learned.
+        vse = sd.get("v_stream_embed")
+        if vse is not None and vse.shape[1] == 1:
+            sd["v_stream_embed"] = vse.expand(1, N_STREAMS, -1).clone()
+        model_ms.load_state_dict(sd, strict=False)
 
-    single_model_path = args.model if args.model else MODEL_CACHE
+    single_model_path = args.model if (args.model and not args.multi_stream) else MODEL_CACHE
     model = Navigator().to(DEVICE)
     if os.path.exists(single_model_path):
         print(f"📦 Loading model: {single_model_path}")
