@@ -46,7 +46,7 @@ See [Cover Art](#cover-art-visual-layer) below.
 **No Python, no installers to fight.** Grab the pre-built app and drag it to
 `/Applications`:
 
-- macOS: [`0MGE.app`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-app-neural-macOS.zip) (self-contained neural engine + UI)
+- macOS: [`0MGE.app`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-app-neural-macOS.zip) (self-contained neural engine + UI); first launch: **right-click → Open**
 - Or run from source:
   ```bash
   git clone https://github.com/0penAGI/0MGE.git && cd 0MGE
@@ -264,7 +264,7 @@ INT8 navigator only (grain pool stays INT16):
 
 | Platform | File | Install |
 |----------|------|---------|
-| macOS | [0MGE-app-neural-macOS.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-app-neural-macOS.zip) | Unzip, drag `0MGE.app` to `/Applications`, open |
+| macOS | [0MGE-app-neural-macOS.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-app-neural-macOS.zip) | Unzip, drag `0MGE.app` to `/Applications`, **right-click → Open** (first launch, unsigned build) |
 | Windows | Coming soon | |
 
 First run: pick a music folder → Generate. It scans your library, builds the grain
