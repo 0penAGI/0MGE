@@ -21,3 +21,8 @@ genome_filelist.json
 genome_test_info.json
 train_multi.log
 train_multi.log
+
+# PyInstaller artifacts
+build/
+dist/
+*.spec.bak

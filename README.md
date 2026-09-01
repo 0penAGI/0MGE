@@ -43,11 +43,16 @@ See [Cover Art](#cover-art-visual-layer) below.
 
 ### Option 1: Desktop App (Recommended)
 
-```bash
-git clone https://github.com/0penAGI/0MGE.git && cd 0MGE
-./bootstrap.sh    # macOS / Linux
-# or: setup.bat   # Windows
-```
+**No Python, no installers to fight.** Grab the pre-built app and drag it to
+`/Applications`:
+
+- macOS: [`0MGE.app`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-app-neural-macOS.zip) (self-contained neural engine + UI)
+- Or run from source:
+  ```bash
+  git clone https://github.com/0penAGI/0MGE.git && cd 0MGE
+  ./bootstrap.sh    # macOS / Linux
+  # or: setup.bat   # Windows
+  ```
 
 Opens the desktop app. Select your music folder, hit Generate. That's it.
 
@@ -251,6 +256,20 @@ INT8 navigator only (grain pool stays INT16):
 ---
 
 ## Downloads
+
+### Neural Engine Desktop App
+
+> Self-contained macOS app — Python, torch and all libraries are bundled inside.
+> Nothing to install.
+
+| Platform | File | Install |
+|----------|------|---------|
+| macOS | [0MGE-app-neural-macOS.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-app-neural-macOS.zip) | Unzip, drag `0MGE.app` to `/Applications`, open |
+| Windows | Coming soon | |
+
+First run: pick a music folder → Generate. It scans your library, builds the grain
+pool (~64 MB) and trains the navigator locally. Output goes to
+`~/Library/Application Support/0MGE/granular_output/`.
 
 ### VST3 / AU Plugin Installer
 

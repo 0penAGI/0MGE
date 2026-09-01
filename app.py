@@ -22,10 +22,22 @@ from PySide6.QtWidgets import (
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 
 DIR = Path(__file__).parent
-OUT = DIR / "granular_output"
-CACHE = DIR / "scan_index.json"
+
+# Frozen (.app) bundle is read-only — write workspace under home.
+FROZEN = bool(getattr(sys, "frozen", False))
+if FROZEN:
+    WORK = Path(os.environ.get("0MGE_WORK", Path.home() / "Library" / "Application Support" / "0MGE"))
+    try:
+        WORK.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        WORK = DIR
+else:
+    WORK = DIR
+
+OUT = WORK / "granular_output"
+CACHE = WORK / "scan_index.json"
 ENGINE = DIR / "granular_field.py"
-SETTINGS = DIR / "app_settings.json"
+SETTINGS = WORK / "app_settings.json"
 
 SCAN_DIRS = [
     Path.home() / "Music",
@@ -250,25 +262,30 @@ class GenerateWorker(QObject):
 
     def run(self):
         try:
-            args = [sys.executable, str(ENGINE),
-                    "--bars", str(self.bars), "--bpm", str(self.bpm),
-                    "--temperature", str(self.temp), "--generate-only"]
+            engine_args = ["--bars", str(self.bars), "--bpm", str(self.bpm),
+                           "--temperature", str(self.temp), "--generate-only"]
             if self.seed is not None:
-                args.extend(["--seed", str(self.seed)])
+                engine_args.extend(["--seed", str(self.seed)])
             if self.multi:
-                args.append("--multi-stream")
+                engine_args.append("--multi-stream")
             if self.closed:
-                args.extend(["--closed-loop", "8"])
+                engine_args.extend(["--closed-loop", "8"])
             if self.train_multi:
-                args.append("--train-multi")
+                engine_args.append("--train-multi")
             if self.visual:
-                args.append("--visual")
+                engine_args.append("--visual")
+
+            if FROZEN:
+                # The bundled .app binary re-launches itself as the engine worker.
+                args = [sys.executable, "--engine-worker"] + engine_args
+            else:
+                args = [sys.executable, str(ENGINE)] + engine_args
 
             self.progress.emit(10, "")
 
             proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, text=True,
-                                    cwd=str(DIR))
+                                    cwd=str(WORK))
             for line in proc.stdout:
                 l = line.strip()
                 if "GENERATING" in l or "MULTI-STREAM" in l:
@@ -507,8 +524,8 @@ class App(QWidget):
         })
 
     def _check_pool(self):
-        pool = DIR / "granular_pool_lite.npz"
-        model = DIR / "granular_navigator_v2.pt"
+        pool = WORK / "granular_pool_lite.npz"
+        model = WORK / "granular_navigator_v2.pt"
         if pool.exists() and model.exists():
             d = np.load(pool, allow_pickle=True)
             n = {k: len(d[f"{k}_feats"]) for k in ["micro", "meso", "macro"]}
@@ -644,6 +661,11 @@ class App(QWidget):
 
 
 if __name__ == "__main__":
+    if "--engine-worker" in sys.argv:
+        sys.argv = [a for a in sys.argv if a != "--engine-worker"]
+        import granular_field
+        granular_field.main()
+        sys.exit(0)
     app = QApplication(sys.argv)
     win = App()
     win.show()
