@@ -27,12 +27,6 @@ It's NOT text-to-music. It doesn't generate beats or songs. It learns the sonic 
 
 ## Quick Start
 
-> **Storage: no gigabytes in normal use.** 0MGE reads your music files **in place**
-> (it never copies your library) and caches compact grain features — a **~64 MB**
-> file. Training on your own music produces a ~64 MB pool + a ~5 MB model. The 4.9 GB
-> `granular_pool_v2_int16.npz` is a **pre-baked example** that we publish only so you
-> can hear 0MGE without training anything — you never need it for your own sounds.
-
 ### Option 0: Audio + Cover Art (Dual Brain)
 
 Generate a track with its album cover, **embedded into the WAV**:
