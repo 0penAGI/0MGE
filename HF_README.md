@@ -78,10 +78,10 @@ Example cover from the repo's visual layer (`--bars 8 --seed 5`):
 
 ![Cover Art Example](https://raw.githubusercontent.com/0penAGI/0MGE/main/cover.png)
 
-> **Note:** these HuggingFace weights are **audio-only** — the visual head lives in the
-> repo code but is not baked into the published `granular_multi_v1.pt` yet.
-> Train it on your images (`python3 granular_field.py --train-multi --train-visual`)
-> before expecting covers; audio generation works out of the box.
+> **Note:** the demo above works out of the box. Covers are generated the same way —
+> and for **your own** covers you don't need the HuggingFace weights at all: 0MGE
+> trains its audio navigator and visual head locally from your music and pictures
+> (the desktop app does this automatically). No downloads required.
 
 ---
 

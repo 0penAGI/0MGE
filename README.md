@@ -58,9 +58,12 @@ pip install numpy torch librosa scikit-learn soundfile
 python3 granular_field.py --bars 60 --multi-stream
 ```
 
-### Option 3: Pre-trained Demo
+### Option 3: Demo (pre-trained pool, optional)
 
-Hear what 0MGE sounds like with our pre-trained model (trained on 2389 tracks).
+> 0MGE works from **your** music with nothing to download — it scans, extracts
+> grains and trains its own navigator on first run (the desktop app does this in
+> one click). The pre-trained demo pool below is an extra: a ready-made 2389-track
+> library if you want to hear it before training on your own folder.
 
 ```bash
 # 1. Install dependencies
@@ -174,10 +177,10 @@ cmake -G Xcode .. && cmake --build . --config Release
 ### Neural Engine
 
 ```bash
-# From your music (app does this automatically)
+# From your music (app does this automatically — no downloads needed)
 python3 granular_field.py --bars 60 --multi-stream
 
-# With pre-trained demo model
+# With pre-trained demo model (optional)
 python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt --bars 60 --multi-stream
 
 # Also generate a cover art (cover_*.png + embedded ID3 APIC in the WAV)
@@ -284,11 +287,9 @@ Restart your DAW after copying. Uninstall: delete the files above.
 | `granular_pool_v2_int16.npz` | 4.9 GB | Full grain pool (566K grains) |
 | `granular_pool_lite.npz` | 64 MB | Lite pool (features only) |
 
-> **Note (weights):** published HuggingFace weights are the **audio-only** model for
-> now — the visual head ships in the repo code but isn't baked into
-> `granular_multi_v1.pt` yet. Train it on your own image pool
-> (`--train-multi --train-visual`) before expecting covers; plain audio generation
-> works with the published weights.
+> **Note:** these are optional — 0MGE trains its own audio navigator and visual head
+> from your music and pictures locally, no downloads required. The pre-trained files
+> above are just a ready-made demo library.
 
 ### Demo Audio
 
