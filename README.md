@@ -27,6 +27,31 @@ It's NOT text-to-music. It doesn't generate beats or songs. It learns the sonic 
 
 ## Quick Start
 
+### Install
+
+Everything installs from the [Releases page](https://github.com/0penAGI/0MGE/releases) — pick what you want:
+
+**Neural Engine Desktop App** (recommended) — self-contained, Python/torch bundled inside.
+Nothing to install, no command line:
+
+1. Download [`0MGE-app-neural-macOS.zip`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-app-neural-macOS.zip) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
+2. Unzip and drag `0MGE.app` to `/Applications`
+3. First launch: **right-click → Open** (unsigned build) → picks a music folder → Generate. That's it.
+
+**VST3/AU Plugin** — real-time granular processor for your DAW:
+
+1. Download [`0MGE-1.0.0-macOS.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
+2. Double-click the `.pkg` → pick **VST3 + AU Plugin** and/or **Standalone App**
+3. Enter admin password → restart your DAW — 0MGE appears in your plugin list
+
+**Run from source** (Linux/Windows or power users):
+
+```bash
+git clone https://github.com/0penAGI/0MGE.git && cd 0MGE
+./bootstrap.sh    # macOS / Linux
+# or: setup.bat   # Windows
+```
+
 ### Option 0: Audio + Cover Art (Dual Brain)
 
 Generate a track with its album cover, **embedded into the WAV**:
@@ -41,18 +66,20 @@ picks grains from your images and composites a 512×512 cover. The cover is writ
 so music players (Music.app, iTunes, QuickLook, TagLib tools) show it with the file.
 See [Cover Art](#cover-art-visual-layer) below.
 
-### Option 1: Desktop App (Recommended)
+### Option 1: Desktop App
 
-**No Python, no installers to fight.** Grab the pre-built app and drag it to
-`/Applications`:
+**No Python, no installers to fight.** Installed in the [Install](#install) block above
+(self-contained neural engine + UI). Just launch:
 
-- macOS: [`0MGE.app`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-app-neural-macOS.zip) (self-contained neural engine + UI); first launch: **right-click → Open**
-- Or run from source:
-  ```bash
-  git clone https://github.com/0penAGI/0MGE.git && cd 0MGE
-  ./bootstrap.sh    # macOS / Linux
-  # or: setup.bat   # Windows
-  ```
+- Open `0MGE.app` from `/Applications` (first launch: **right-click → Open**)
+- Select your music folder, hit Generate. That's it.
+
+Or run from source:
+```bash
+git clone https://github.com/0penAGI/0MGE.git && cd 0MGE
+./bootstrap.sh    # macOS / Linux
+# or: setup.bat   # Windows
+```
 
 Opens the desktop app. Select your music folder, hit Generate. That's it.
 
