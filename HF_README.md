@@ -74,6 +74,15 @@ grain pool — your images cut into 16/32/64px grains, 512 clusters, Halton-scan
 The cover is saved as `cover_60bars_*.png` **and embedded into the `.wav`** (ID3v2.3 APIC in
 a standard RIFF `ID3 ` chunk), so music players show the artwork with the file.
 
+Example cover from the repo's visual layer (`--bars 8 --seed 5`):
+
+![Cover Art Example](https://raw.githubusercontent.com/0penAGI/0MGE/main/cover.png)
+
+> **Note:** these HuggingFace weights are **audio-only** — the visual head lives in the
+> repo code but is not baked into the published `granular_multi_v1.pt` yet.
+> Train it on your images (`python3 granular_field.py --train-multi --train-visual`)
+> before expecting covers; audio generation works out of the box.
+
 ---
 
 ## Files

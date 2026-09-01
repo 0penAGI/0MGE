@@ -40,6 +40,16 @@ picks grains from your images and composites a 512×512 cover. The cover is writ
 `cover_30bars_*.png` AND embedded into the `.wav` itself (ID3v2 APIC `ID3 ` RIFF chunk),
 so music players (Music.app, iTunes, QuickLook, TagLib tools) show it with the file.
 
+Example cover, generated from the same brain that makes the audio
+(`--bars 8 --seed 5`, 192 visual grains from the image grain pool):
+
+![Cover Art Example](cover.png)
+
+> **Note (weights):** the visual layer lives in the repo code. The pre-trained
+> weights on HuggingFace are still the **audio-only** model — download and train
+> the visual head (`--train-multi --train-visual`) before expecting covers, or
+> the visual head will output unfinished art. Audio generation works as-is.
+
 ### Option 1: Desktop App (Recommended)
 
 ```bash
@@ -200,6 +210,11 @@ The same MultiNavigator backbone that walks the audio grain field also drives a
 
 Visual training loss: `0.5·CE(v_cluster) + 0.5·MSE(v_blend)`, additive to the audio loss.
 The visual pool is cached to `visual_pool.npz`.
+
+> **Note (weights):** the HuggingFace pre-trained weights (`granular_multi_v1.pt`)
+> are the **audio-only** model for now — the visual head ships in the repo code.
+> Train it on your own image pool (`--train-multi --train-visual`) to get the full
+> dual-brain output; plain audio generation works with the published weights.
 
 ### Genome Scanner
 
