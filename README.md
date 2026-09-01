@@ -27,6 +27,19 @@ It's NOT text-to-music. It doesn't generate beats or songs. It learns the sonic 
 
 ## Quick Start
 
+### Option 0: Audio + Cover Art (Dual Brain)
+
+Generate a track with its album cover, **embedded into the WAV**:
+
+```bash
+python3 granular_field.py --multi-stream --visual --bars 30 --vis-pool visual_pool.npz
+```
+
+Same model, same granular engine — the MultiNavigator's **visual head** additionally
+picks grains from your images and composites a 512×512 cover. The cover is written as
+`cover_30bars_*.png` AND embedded into the `.wav` itself (ID3v2 APIC `ID3 ` RIFF chunk),
+so music players (Music.app, iTunes, QuickLook, TagLib tools) show it with the file.
+
 ### Option 1: Desktop App (Recommended)
 
 ```bash
@@ -108,6 +121,7 @@ PySide6 (Qt) desktop interface. The main way to use 0MGE.
 - Builds grain pool locally (~64MB lite cache)
 - Trains MultiNavigator on your grains
 - Generates stereo WAV with built-in player
+- Optional **Cover Art checkbox** — generates and embeds an album cover into the WAV
 - Settings persist between sessions
 
 ### VST3/AU Plugin
@@ -164,7 +178,28 @@ python3 granular_field.py --bars 60 --multi-stream
 
 # With pre-trained demo model
 python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt --bars 60 --multi-stream
+
+# Also generate a cover art (cover_*.png + embedded ID3 APIC in the WAV)
+python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt --bars 60 --multi-stream --visual
+
+# Train the visual head (needs an image pool; scans ~/Pictures, ~/Desktop, ~/Downloads)
+python3 granular_field.py --train-multi --train-visual --pool granular_pool_lite.npz
 ```
+
+### Cover Art (Visual Layer)
+
+The same MultiNavigator backbone that walks the audio grain field also drives a
+**visual head** over a picture grain pool:
+
+1. **Scan** — images from `~/Pictures`, `~/Desktop`, `~/Downloads` are cut into 16/32/64px patches
+2. **Extract** — 22 visual features per patch (color stats, texture, FFT, edge density, quadrant)
+3. **Cluster** — 512 visual clusters over ~100K grains
+4. **Walk** — the navigator's `v_cluster`/`v_blend` heads choose which image-grains to place, at what position/scale/alpha
+5. **Composite** — 720 grains (one per stream per step) land on a Halton low-discrepancy scan with neural jitter → full-canvas mosaic of your photos
+6. **Embed** — the cover is embedded into the `.wav` as a standard RIFF `ID3 ` chunk (ID3v2.3 APIC), readable by Music.app / iTunes / TagLib tools
+
+Visual training loss: `0.5·CE(v_cluster) + 0.5·MSE(v_blend)`, additive to the audio loss.
+The visual pool is cached to `visual_pool.npz`.
 
 ### Genome Scanner
 

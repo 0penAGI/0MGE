@@ -4,21 +4,21 @@ library_name: 0mge
 license: mit
 tags:
   - audio
+  - music-generation
+  - generative-audio
   - granular-synthesis
   - neural-network
   - sound-design
-  - quantization
-  - pytorch
-  - music-generation
-  - generative-audio
   - drone-synthesis
   - texture-generation
   - spectral-analysis
   - local-ai
   - open-source
+  - pytorch
   - transformer
   - signal-processing
-pipeline_tag: other
+pipeline_tag: text-to-audio
+inference: false
 ---
 
 # 0MGE: Neural Granular Engine
@@ -61,6 +61,18 @@ python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_mul
 ```
 
 Output: `granular_output/granular_60bars_*.wav` (stereo, 22050 Hz).
+
+### Audio + Cover Art (Dual Brain)
+
+```bash
+python3 granular_field.py --pool granular_pool_v2_int16.npz --model granular_multi_v1.pt \
+  --bars 60 --multi-stream --visual --vis-pool visual_pool.npz
+```
+
+Generates a 512×512 cover from the **same neural navigator** (visual head over a picture
+grain pool — your images cut into 16/32/64px grains, 512 clusters, Halton-scanned mosaic).
+The cover is saved as `cover_60bars_*.png` **and embedded into the `.wav`** (ID3v2.3 APIC in
+a standard RIFF `ID3 ` chunk), so music players show the artwork with the file.
 
 ---
 

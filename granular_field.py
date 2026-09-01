@@ -13,6 +13,7 @@ import librosa
 import soundfile as sf
 from scipy.io.wavfile import write
 from sklearn.cluster import MiniBatchKMeans
+from PIL import Image
 warnings.filterwarnings("ignore")
 
 SCAN_DIRS = [
@@ -21,8 +22,21 @@ SCAN_DIRS = [
     os.path.expanduser("~/jam Project"),
     os.path.expanduser("~/Music"),
 ]
+VISUAL_SCAN_DIRS = SCAN_DIRS + [
+    os.path.expanduser("~/Pictures"),
+    os.path.expanduser("~/Desktop"),
+    os.path.expanduser("~/Downloads"),
+]
 SKIP_DIRS = {"Factory Packs", "User Library", "Live Recordings"}
 AUDIO_EXTS = {".wav", ".aiff", ".aif", ".flac", ".mp3", ".ogg", ".m4a"}
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
+
+VIS_MICRO_SIZE = 16
+VIS_MESO_SIZE = 32
+VIS_MACRO_SIZE = 64
+VIS_FEAT_DIM = 22
+VIS_CANVAS_SIZE = 512
+VIS_N_CLUSTERS = 512
 SR = 22050
 N_FFT = 1024
 HOP = 256
@@ -69,6 +83,8 @@ POOL_CACHE = "granular_pool_v2.npz"
 POOL_CACHE_LIGHT = "granular_pool_lite.npz"
 MODEL_CACHE = "granular_navigator_v2.pt"
 MODEL_MULTI_CACHE = "granular_multi_v1.pt"
+VIS_POOL_CACHE = "visual_pool.npz"
+VIS_MODEL_CACHE = "granular_multi_visual_v1.pt"
 OUT = "granular_output"
 os.makedirs(OUT, exist_ok=True)
 
@@ -96,6 +112,31 @@ def scan_audio(dirs):
     files = list(seen.values())
     with open(FILELIST_CACHE, "w") as f: json.dump(files, f)
     return files
+
+
+def scan_images(dirs, max_files=2000):
+    seen = {}
+    for d in dirs:
+        if not os.path.isdir(d): continue
+        for root, _, fnames in os.walk(d):
+            rel = os.path.relpath(root, d)
+            if any(s in rel for s in SKIP_DIRS): continue
+            for fn in fnames:
+                if os.path.splitext(fn)[1].lower() not in IMAGE_EXTS: continue
+                fp = os.path.join(root, fn)
+                try:
+                    size = os.path.getsize(fp)
+                except OSError:
+                    continue
+                if size < 2000 or size > 15 * 1024 * 1024:
+                    continue
+                h = md5_fast(fp)
+                if h and h not in seen:
+                    seen[h] = fp
+                if len(seen) >= max_files:
+                    return list(seen.values())
+    return list(seen.values())
+
 
 def extract_feat_from_stft(S_slice):
     """Feature extraction from LINEAR magnitude STFT slice [n_fft_half, n_frames]."""
@@ -337,10 +378,11 @@ class Navigator(nn.Module):
 # ══════════════════════════════════════════════════════════════
 class MultiNavigator(nn.Module):
     """6 independent streams: sub, drums, harmonic, texture, noise, air.
-    Shared backbone transformer + per-stream heads."""
+    Shared backbone transformer + per-stream audio heads + visual head."""
 
     def __init__(self, feat_dim=FEAT_DIM, state_dim=STATE_DIM, hidden=HIDDEN_DIM,
-                 ctx=CONTEXT_LEN, n_clusters=N_CLUSTERS, n_streams=N_STREAMS):
+                 ctx=CONTEXT_LEN, n_clusters=N_CLUSTERS, n_streams=N_STREAMS,
+                 vis_feat_dim=VIS_FEAT_DIM, vis_n_clusters=VIS_N_CLUSTERS):
         super().__init__()
         self.n_streams = n_streams
         self.feat_enc = nn.Linear(feat_dim, state_dim)
@@ -360,6 +402,13 @@ class MultiNavigator(nn.Module):
         self.stream_embed = nn.Parameter(torch.randn(1, n_streams, hidden) * 0.05)
         self.cond_proj = nn.Linear(4, hidden)
 
+        # ── Visual head: same backbone, separate visual prediction ──────
+        self.v_feat_enc = nn.Linear(vis_feat_dim, state_dim)
+        self.v_cross = nn.MultiheadAttention(hidden, num_heads=2, batch_first=True)
+        self.v_stream_embed = nn.Parameter(torch.randn(1, 1, hidden) * 0.05)
+        self.v_cluster_head = nn.Linear(hidden, vis_n_clusters)
+        self.v_blend_head = nn.Sequential(nn.Linear(hidden, hidden // 2), nn.GELU(), nn.Linear(hidden // 2, 4), nn.Tanh())
+
         # ── Attractor field: learned global state per stream ──────────
         # Unlike ctx_z (sliding window, local), attractors persist across the
         # full generation. They pull the sound toward a learned direction —
@@ -373,7 +422,7 @@ class MultiNavigator(nn.Module):
         # running attractor state per stream: updated during generation, frozen during training
         self.register_buffer("attractor_state", torch.zeros(n_streams, hidden))
 
-    def forward(self, states, stream_idx=0, cond=None):
+    def forward(self, states, stream_idx=0, cond=None, vis_states=None):
         B, K, _ = states.shape
         z = self.proj(self.feat_enc(states)) + self.pos[:, :K, :]
         z = self.transformer(z)
@@ -401,8 +450,23 @@ class MultiNavigator(nn.Module):
         if cond is not None:
             h = h + self.cond_proj(cond)
 
-        return (self.stream_cluster(h), self.stream_level(h),
-                self.stream_params(h), self.stream_density(h), self.stream_pan(h))
+        # ── Visual forward: separate pathway from backbone ──────────
+        v_h = None
+        if vis_states is not None:
+            vK = vis_states.shape[1]
+            vz = self.proj(self.v_feat_enc(vis_states)) + self.pos[:, :vK, :]
+            vz = self.transformer(vz)
+            v_ctx = vz[:, -1, :]
+            vse = self.v_stream_embed.expand(B, -1, -1)
+            vcrossed, _ = self.v_cross(vse, vz, vz)
+            v_h = (v_ctx + vcrossed.squeeze(1) + a_pull) / 3
+
+        audio_out = (self.stream_cluster(h), self.stream_level(h),
+                     self.stream_params(h), self.stream_density(h), self.stream_pan(h))
+        if v_h is not None:
+            vis_out = (self.v_cluster_head(v_h), self.v_blend_head(v_h))
+            return audio_out, vis_out
+        return audio_out, None
 
     def update_attractors(self, states, stream_idx, temp=0.8):
         """Update attractor states from the current context — called during generation."""
@@ -425,19 +489,26 @@ class MultiNavigator(nn.Module):
                     self.attractor_state[s] = 0.9 * self.attractor_state[s] + 0.1 * new_state[i]
 
     @torch.no_grad()
-    def step(self, states, stream_idx=0, temp=0.8, cond=None):
+    def step(self, states, stream_idx=0, temp=0.8, cond=None, vis_states=None):
         self.eval()
         if states.dim() == 2: states = states.unsqueeze(0)
-        cl, lv, pr, dn, pn = self.forward(states, stream_idx=stream_idx, cond=cond)
+        audio_out, vis_out = self.forward(states, stream_idx=stream_idx, cond=cond, vis_states=vis_states)
+        cl, lv, pr, dn, pn = audio_out
         c = F.softmax(cl.squeeze(0) / temp, dim=-1)
         l = F.softmax(lv.squeeze(0) / temp, dim=-1)
-        return {
+        result = {
             "cluster": torch.multinomial(c, 1).item(),
             "level": torch.multinomial(l, 1).item(),
             "params": pr.squeeze(0).cpu().numpy(),
             "density": float(dn.squeeze(0).cpu()),
             "pan": float(pn.squeeze(0).cpu()),
         }
+        if vis_out is not None:
+            vcl, vbl = vis_out
+            vc = F.softmax(vcl.squeeze(0) / temp, dim=-1)
+            result["v_cluster"] = torch.multinomial(vc, 1).item()
+            result["v_blend"] = vbl.squeeze(0).cpu().numpy()
+        return result
 
 
 # ══════════════════════════════════════════════════════════════
@@ -564,7 +635,14 @@ class GranularEngine:
     def _get_file(self, fp):
         if fp in self._file_cache:
             return self._file_cache[fp]
-        y, fsr = sf.read(fp, dtype="float32", always_2d=False)
+        try:
+            y, fsr = sf.read(fp, dtype="float32", always_2d=False)
+        except Exception:
+            # source file missing/locked — cache a quiet placeholder so the
+            # whole generation doesn't die on one bad file
+            y = np.zeros(SR, dtype=np.float32)
+            self._file_cache[fp] = y
+            return y
         if y.ndim > 1: y = np.mean(y, axis=1)
         if fsr != SR: y = librosa.resample(y, orig_sr=fsr, target_sr=SR)
         if len(self._file_cache) < 200:
@@ -906,6 +984,258 @@ class STFTCritic:
 
 
 # ══════════════════════════════════════════════════════════════
+# VISUAL GRAINS — granular synthesis for images
+# ══════════════════════════════════════════════════════════════
+def extract_visual_feat(patch):
+    """22-dim feature vector from an RGB patch (same dim as audio features)."""
+    arr = np.array(patch, dtype=np.float64) / 255.0
+    feat = []
+    # Color stats per channel (6)
+    for c in range(3):
+        ch = arr[:,:,c]
+        feat.append(float(np.mean(ch)))
+        feat.append(float(np.std(ch)))
+    # Overall brightness + contrast (2)
+    gray = np.mean(arr, axis=2)
+    feat.append(float(np.mean(gray)))
+    feat.append(float(np.std(gray)))
+    # Texture: gradient magnitude (2)
+    gx = np.diff(gray, axis=1)
+    gy = np.diff(gray, axis=0)
+    feat.append(float(np.mean(np.abs(gx))))
+    feat.append(float(np.mean(np.abs(gy))))
+    # Spatial distribution: quadrant brightness (4)
+    h, w = gray.shape
+    feat.append(float(np.mean(gray[:h//2, :w//2])))
+    feat.append(float(np.mean(gray[:h//2, w//2:])))
+    feat.append(float(np.mean(gray[h//2:, :w//2])))
+    feat.append(float(np.mean(gray[h//2:, w//2:])))
+    # Frequency: mean of FFT magnitude per channel (3)
+    for c in range(3):
+        fft_mag = np.abs(np.fft.fft2(arr[:,:,c]))
+        feat.append(float(np.mean(fft_mag) / (np.max(fft_mag) + 1e-10)))
+    # Color ratios (3)
+    total = np.mean(arr) + 1e-10
+    feat.append(float(np.mean(arr[:,:,0]) / total))
+    feat.append(float(np.mean(arr[:,:,1]) / total))
+    feat.append(float(np.mean(arr[:,:,2]) / total))
+    # Edge density (2)
+    gx_pad = np.pad(gx, ((0,0),(0,1)))  # (H, W)
+    gy_pad = np.pad(gy, ((0,1),(0,0)))  # (H, W)
+    edges = np.sqrt(gx_pad**2 + gy_pad**2)
+    feat.append(float(np.mean(edges)))
+    feat.append(float(np.std(edges)))
+    return np.array(feat[:VIS_FEAT_DIM], dtype=np.float32)
+
+
+class VisualGrainExtractor:
+    """Extract visual grains (patches + features) from images."""
+    def __init__(self):
+        self.micro_size = VIS_MICRO_SIZE
+        self.meso_size = VIS_MESO_SIZE
+        self.macro_size = VIS_MACRO_SIZE
+
+    def extract(self, image_paths, max_per_image=50):
+        micro_feats, micro_patches = [], []
+        meso_feats, meso_patches = [], []
+        macro_feats, macro_patches = [], []
+        errors = 0
+
+        print(f"\n🖼️ Extracting visual grains from {len(image_paths)} images...")
+        t0 = time.time()
+
+        for i, fp in enumerate(image_paths):
+            if (i+1) % 100 == 0 or i+1 == len(image_paths):
+                print(f"\r  [{i+1}/{len(image_paths)}] μ={len(micro_feats)} σ={len(meso_feats)} Ω={len(macro_feats)}", end="", flush=True)
+            try:
+                img = Image.open(fp).convert("RGB")
+                w, h = img.size
+                # resize to manageable size
+                if max(w, h) > 1024:
+                    scale = 1024 / max(w, h)
+                    img = img.resize((int(w*scale), int(h*scale)), Image.LANCZOS)
+                arr = np.array(img)
+                cnt = 0
+
+                for size, f_list, p_list in [
+                    (self.micro_size, micro_feats, micro_patches),
+                    (self.meso_size, meso_feats, meso_patches),
+                    (self.macro_size, macro_feats, macro_patches),
+                ]:
+                    cnt = 0
+                    h_img, w_img = arr.shape[:2]
+                    stride = max(size // 2, 1)
+                    for y in range(0, h_img - size + 1, stride):
+                        for x in range(0, w_img - size + 1, stride):
+                            if cnt >= max_per_image: break
+                            patch = arr[y:y+size, x:x+size]
+                            # skip very dark patches
+                            if np.mean(patch) < 10: continue
+                            feat = extract_visual_feat(
+                                Image.fromarray(patch))
+                            if np.any(np.isnan(feat)) or np.all(feat == 0): continue
+                            f_list.append(feat)
+                            p_list.append(patch.astype(np.float32) / 255.0)
+                            cnt += 1
+            except Exception:
+                errors += 1
+
+        elapsed = time.time() - t0
+        print(f"\n  ✅ {elapsed:.1f}s — μ={len(micro_feats)} σ={len(meso_feats)} Ω={len(macro_feats)} err={errors}")
+
+        return {
+            "micro_feats": np.array(micro_feats, dtype=np.float32) if micro_feats else np.zeros((0, VIS_FEAT_DIM), np.float32),
+            "meso_feats": np.array(meso_feats, dtype=np.float32) if meso_feats else np.zeros((0, VIS_FEAT_DIM), np.float32),
+            "macro_feats": np.array(macro_feats, dtype=np.float32) if macro_feats else np.zeros((0, VIS_FEAT_DIM), np.float32),
+            "micro_patches": np.array(micro_patches, dtype=np.float32) if micro_patches else np.zeros((0, self.micro_size, self.micro_size, 3), np.float32),
+            "meso_patches": np.array(meso_patches, dtype=np.float32) if meso_patches else np.zeros((0, self.meso_size, self.meso_size, 3), np.float32),
+            "macro_patches": np.array(macro_patches, dtype=np.float32) if macro_patches else np.zeros((0, self.macro_size, self.macro_size, 3), np.float32),
+        }
+
+
+def build_visual_clusters(pool):
+    print("🔬 Clustering visual grains...")
+    all_f = np.concatenate([pool["micro_feats"], pool["meso_feats"], pool["macro_feats"]])
+    if len(all_f) > 50000:
+        idx = np.random.choice(len(all_f), 50000, replace=False)
+        fit_f = all_f[idx]
+    else:
+        fit_f = all_f
+    n_cl = min(VIS_N_CLUSTERS, len(fit_f))
+    kmeans = MiniBatchKMeans(n_clusters=n_cl, batch_size=1024, n_init=3, random_state=42)
+    kmeans.fit(fit_f)
+    all_labels = kmeans.predict(all_f)
+    n_m = len(pool["micro_feats"])
+    n_s = len(pool["meso_feats"])
+    clusters = {
+        "micro": all_labels[:n_m],
+        "meso": all_labels[n_m:n_m+n_s],
+        "macro": all_labels[n_m+n_s:],
+    }
+    print(f"  ✅ {n_cl} visual clusters")
+    return clusters
+
+
+def _visual_feat_for_grain(vis_pool, level, grain_idx):
+    """Return the feature vector of a visual grain given (level, index)."""
+    key = ["micro_feats", "meso_feats", "macro_feats"][level]
+    feats = vis_pool[key]
+    if feats is not None and len(feats) > 0:
+        return feats[min(grain_idx, len(feats) - 1)].astype(np.float32)
+    return np.zeros(VIS_FEAT_DIM, dtype=np.float32)
+
+
+class VisualEngine:
+    """Composites visual grains into an image canvas."""
+    def __init__(self, pool, clusters):
+        self.sizes = {
+            0: VIS_MICRO_SIZE, 1: VIS_MESO_SIZE, 2: VIS_MACRO_SIZE,
+        }
+        self.patches = {
+            0: pool["micro_patches"], 1: pool["meso_patches"], 2: pool["macro_patches"],
+        }
+        self.cluster_map = {}
+        lm = {"micro": 0, "meso": 1, "macro": 2}
+        for ln, ids in clusters.items():
+            for j, cid in enumerate(ids):
+                cid = int(cid)
+                if cid not in self.cluster_map:
+                    self.cluster_map[cid] = []
+                self.cluster_map[cid].append((lm[ln], j))
+
+    def render(self, steps, canvas_size=VIS_CANVAS_SIZE):
+        canvas = np.zeros((canvas_size, canvas_size, 3), dtype=np.float64)
+        wt = np.zeros((canvas_size, canvas_size), dtype=np.float64)
+
+        for s in steps:
+            cluster = int(s["cluster"])
+            grains = self.cluster_map.get(cluster, [])
+            if not grains: continue
+            ln, gi = grains[np.random.randint(len(grains))]
+            patch = self.patches[ln][gi]
+
+            size = self.sizes[ln]
+            pos_x = int(np.clip(s.get("pos_x", 0.5), 0, 1) * (canvas_size - size))
+            pos_y = int(np.clip(s.get("pos_y", 0.5), 0, 1) * (canvas_size - size))
+
+            # optional: scale the patch
+            target_size = int(size * np.clip(s.get("scale", 1.0), 0.5, 3.0))
+            target_size = max(target_size, 4)
+            if target_size != size:
+                p_img = Image.fromarray((patch * 255).astype(np.uint8))
+                p_img = p_img.resize((target_size, target_size), Image.LANCZOS)
+                patch = np.array(p_img, dtype=np.float64) / 255.0
+
+            # per-grain contrast stretch — makes dark photo patches read as
+            # vivid color tiles instead of near-black squares
+            lo = float(patch.min())
+            hi = float(patch.max())
+            if hi - lo > 0.02:
+                patch = (patch - lo) / (hi - lo)
+
+            # alpha blending
+            alpha = float(np.clip(s.get("alpha", 0.5), 0.0, 1.0))
+
+            # bounds
+            end_y = min(pos_y + target_size, canvas_size)
+            end_x = min(pos_x + target_size, canvas_size)
+            ph = end_y - pos_y
+            pw = end_x - pos_x
+            if ph <= 0 or pw <= 0: continue
+
+            p_crop = patch[:ph, :pw]
+            canvas[pos_y:end_y, pos_x:end_x] += p_crop * alpha
+            wt[pos_y:end_y, pos_x:end_x] += alpha
+
+        # normalize where weighted
+        mask = wt > 1e-6
+        for c in range(3):
+            canvas[:,:,c] = np.where(mask, canvas[:,:,c] / np.maximum(wt, 1e-6), canvas[:,:,c])
+
+        # diagnostics (useful for debugging coverage/brightness)
+        if os.environ.get("GF_VIS_DEBUG"):
+            print(f"   [render] mask_cov={mask.mean()*100:.1f}% placed_mean="
+                  f"{canvas[mask].mean(axis=0) if mask.any() else (0,0,0)}")
+
+        # Fill unweighted (empty) regions with a soft dark base so the canvas
+        # is never pure black. Derived from the average of the placed grains
+        # (dimmed), giving the composite a continuous "field" behind the grains.
+        placed = canvas[mask] if mask.any() else canvas.reshape(-1, 3)
+        if len(placed) > 0:
+            base = placed.mean(axis=0) * 0.35
+        else:
+            base = np.array([0.1, 0.1, 0.12])
+        filler = np.zeros_like(canvas)
+        filler[:,:,0] = base[0]; filler[:,:,1] = base[1]; filler[:,:,2] = base[2]
+        for c in range(3):
+            canvas[:,:,c] = np.where(mask, canvas[:,:,c], filler[:,:,c])
+
+        canvas = np.clip(canvas * 255, 0, 255).astype(np.uint8)
+        return Image.fromarray(canvas)
+
+    def render_grid(self, steps, canvas_size=VIS_CANVAS_SIZE):
+        """Debug: render each grain on its own tile in a grid."""
+        n = len(steps)
+        if n == 0:
+            return Image.fromarray(np.zeros((canvas_size, canvas_size, 3), dtype=np.uint8))
+        cols = int(np.ceil(np.sqrt(n)))
+        rows = int(np.ceil(n / cols))
+        tile = canvas_size // max(cols, 1)
+        grid = Image.new("RGB", (cols * tile, rows * tile))
+        for i, s in enumerate(steps):
+            cluster = int(s["cluster"])
+            grains = self.cluster_map.get(cluster, [])
+            if not grains: continue
+            ln, gi = grains[0]
+            patch = self.patches[ln][gi]
+            p_img = Image.fromarray((patch * 255).astype(np.uint8))
+            p_img = p_img.resize((tile, tile), Image.NEAREST)
+            r, c = divmod(i, cols)
+            grid.paste(p_img, (c * tile, r * tile))
+        return grid
+
+
+# ══════════════════════════════════════════════════════════════
 # TRAINING
 # ══════════════════════════════════════════════════════════════
 def extract_params_from_feats(feat_prev, feat_next):
@@ -1039,6 +1369,65 @@ class PairDS(Dataset):
                 torch.tensor(p["level"]), torch.tensor(p["params"]))
 
 
+def build_visual_training_pairs(vis_pool, vis_clusters):
+    """Build visual training pairs from visual grain trajectories.
+    Since images have no temporal order, we synthesize trajectories by
+    random walk through feature space — each step predicts the next visual grain."""
+    all_f = np.concatenate([vis_pool["micro_feats"], vis_pool["meso_feats"], vis_pool["macro_feats"]])
+    n_micro = len(vis_pool["micro_feats"])
+    n_meso = len(vis_pool["meso_feats"])
+
+    def _v_idx(lev, idx):
+        if lev == 0:
+            return min(idx, n_micro - 1)
+        elif lev == 1:
+            return n_micro + min(idx, n_meso - 1)
+        else:
+            return n_micro + n_meso + min(idx, len(all_f) - 1)
+
+    pairs = []
+    rng = np.random.RandomState(42)
+
+    lm = ["micro", "meso", "macro"]
+    # Build per-cluster index for random walks
+    for _ in range(min(20000, len(all_f) // 4)):
+        lev = rng.randint(0, 3)
+        ln = lm[lev]
+        labels = vis_clusters[ln]
+        n_l = len(labels)
+        if n_l == 0: continue
+        start = rng.randint(0, n_l)
+        cluster_id = int(labels[start])
+
+        ctx = []
+        # random context of CONTEXT_LEN feature vectors from same cluster family
+        for j in range(CONTEXT_LEN):
+            gi = _v_idx(lev, (start + j * 7) % n_l)
+            ctx.append(all_f[gi])
+        ctx = np.array(ctx, dtype=np.float32)
+
+        # target: another grain from nearby in feature space
+        t_idx = (start + rng.randint(1, max(n_l // 10, 2))) % n_l
+        target_cluster = int(labels[t_idx])
+
+        # blend params: 4 dims (pos_x, pos_y, scale, alpha)
+        prev_f = all_f[_v_idx(lev, start)]
+        tgt_f = all_f[_v_idx(lev, t_idx)]
+        pos_x = float(np.clip(0.5 + (tgt_f[2] - prev_f[2]) * 2, -1, 1))
+        pos_y = float(np.clip(0.5 + (tgt_f[6] - prev_f[6]) * 4, -1, 1))
+        scale = float(np.clip(1.0 + (tgt_f[13] - prev_f[13]) * 4, -1, 1))
+        alpha = float(np.clip(0.5 + abs(tgt_f[1] - prev_f[1]) * 3, 0, 1))
+
+        pairs.append({
+            "v_ctx": ctx,
+            "v_cluster": target_cluster,
+            "v_blend": np.array([pos_x, pos_y, scale, alpha], dtype=np.float32),
+        })
+
+    print(f"  ✅ {len(pairs)} visual pairs")
+    return pairs
+
+
 class MultiPairDS(Dataset):
     """Training dataset for MultiNavigator. Each pair gets a random stream index."""
     def __init__(self, pairs, n_streams=N_STREAMS):
@@ -1053,6 +1442,17 @@ class MultiPairDS(Dataset):
                 torch.tensor(p.get("density", 0.5), dtype=torch.float32),
                 torch.tensor(p.get("pan", 0.0), dtype=torch.float32),
                 torch.tensor(stream_idx, dtype=torch.long))
+
+
+class VisualPairDS(Dataset):
+    """Training dataset for the visual head."""
+    def __init__(self, pairs):
+        self.p = pairs
+    def __len__(self): return len(self.p)
+    def __getitem__(self, i):
+        p = self.p[i]
+        return (torch.tensor(p["v_ctx"]), torch.tensor(p["v_cluster"]),
+                torch.tensor(p["v_blend"]))
 
 
 def train(model, pairs, n_steps=TRAIN_STEPS):
@@ -1092,22 +1492,45 @@ def train(model, pairs, n_steps=TRAIN_STEPS):
     return model
 
 
-def train_multi(model, pairs, n_steps=TRAIN_STEPS):
+def train_multi(model, pairs, n_steps=TRAIN_STEPS, vis_pairs=None, vis_freq=1):
     ds = MultiPairDS(pairs)
     loader = DataLoader(ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
     opt = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.01)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=n_steps)
+
+    vis_loader = None
+    vis_iter = None
+    if vis_pairs and len(vis_pairs) > 0:
+        vis_ds = VisualPairDS(vis_pairs)
+        vis_loader = DataLoader(vis_ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+        vis_iter = iter(vis_loader)
+        print(f"   Visual pairs: {len(vis_ds)}")
 
     print(f"\n🔥 TRAINING MULTI-NAVIGATOR ({n_steps} steps, {DEVICE})")
     print(f"   Params: {sum(p.numel() for p in model.parameters())/1e6:.1f}M | Pairs: {len(ds)}")
 
     model.train()
     losses = []
+
+    def _next_vis_batch():
+        nonlocal vis_iter, vis_loader
+        try:
+            return next(vis_iter)
+        except StopIteration:
+            if vis_loader is None:
+                return None
+            vis_iter = iter(vis_loader)
+            try:
+                return next(vis_iter)
+            except StopIteration:
+                return None
+
     t0 = time.time()
     step = 0
 
     while step < n_steps:
-        for batch in loader:
+        audio_iter = iter(loader)
+        for batch in audio_iter:
             if step >= n_steps: break
             ctx, tgt_c, tgt_l, tgt_p, tgt_dn, tgt_pn, stream_idx = batch
             ctx = ctx.to(DEVICE); tgt_c = tgt_c.to(DEVICE)
@@ -1115,7 +1538,15 @@ def train_multi(model, pairs, n_steps=TRAIN_STEPS):
             tgt_dn = tgt_dn.to(DEVICE); tgt_pn = tgt_pn.to(DEVICE)
             stream_idx = stream_idx.to(DEVICE)
 
-            cl, lv, pr, dn, pn = model(ctx, stream_idx=stream_idx)
+            vis_in = None
+            if vis_iter is not None and step % vis_freq == 0:
+                vb = _next_vis_batch()
+                if vb is not None:
+                    vctx, tgt_vc, tgt_vb = vb[0].to(DEVICE), vb[1].to(DEVICE), vb[2].to(DEVICE)
+                    vis_in = vctx
+
+            audio_out, vis_out = model(ctx, stream_idx=stream_idx, vis_states=vis_in)
+            cl, lv, pr, dn, pn = audio_out
 
             loss_c = F.cross_entropy(cl, tgt_c)
             loss_l = 0.5 * F.cross_entropy(lv, tgt_l)
@@ -1128,6 +1559,15 @@ def train_multi(model, pairs, n_steps=TRAIN_STEPS):
             loss_at = 0.1 * F.mse_loss(model.attractor_state[stream_idx], ctx_proj)
             loss = loss_c + loss_l + loss_p + 0.5 * loss_dn + 0.5 * loss_pn + loss_at
 
+            # visual head loss
+            loss_v = 0.0
+            if vis_out is not None:
+                vcl, vbl = vis_out
+                loss_vc = F.cross_entropy(vcl, tgt_vc)
+                loss_vbl = F.mse_loss(vbl, tgt_vb)
+                loss_v = 0.5 * loss_vc + 0.5 * loss_vbl
+                loss = loss + loss_v
+
             opt.zero_grad(); loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step(); sched.step()
@@ -1135,15 +1575,16 @@ def train_multi(model, pairs, n_steps=TRAIN_STEPS):
             step += 1
             if step % 500 == 0:
                 avg = np.mean(losses[-500:]); e = time.time()-t0
-                print(f"  step {step:5d}/{n_steps}  loss={avg:.4f}  {e:.0f}s  ETA {e/step*(n_steps-step):.0f}s")
+                print(f"  step {step:5d}/{n_steps}  loss={avg:.4f}  (a={loss_c:.3f} l={loss_l:.3f} p={loss_p:.3f} v={loss_v:.3f})  {e:.0f}s  ETA {e/step*(n_steps-step):.0f}s")
 
     print(f"\n   ✅ {time.time()-t0:.1f}s, loss={np.mean(losses[-100:]):.4f}")
     return model
 
 
 def generate_multi(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8, bars=8, bpm=120,
-                   target_stats=None, noise_inject=0.0):
-    """Multi-stream generation: 6 independent streams + spectral field."""
+                   target_stats=None, noise_inject=0.0, vis_engine=None, vis_pool=None):
+    """Multi-stream generation: 6 independent streams + spectral field.
+    Optionally generates a cover image via the visual head when vis_engine is given."""
     if seed is not None: torch.manual_seed(seed); np.random.seed(seed)
     model.eval()
     dur = int(n_seconds * SR)
@@ -1153,6 +1594,14 @@ def generate_multi(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8,
     all_f = np.concatenate([pool["micro_feats"], pool["meso_feats"], pool["macro_feats"]])
     field = SpectralField()
 
+    # visual context: if a vis pool is given, build its context features
+    v_all_f = None
+    v_ctx = None
+    if vis_engine is not None and vis_pool is not None:
+        v_all_f = np.concatenate([vis_pool["micro_feats"], vis_pool["meso_feats"], vis_pool["macro_feats"]])
+        v_ctx = v_all_f[np.random.choice(len(v_all_f), CONTEXT_LEN, replace=True)].copy()
+        print(f"   Visual pool: {len(v_all_f)} grains → cover art enabled")
+
     cond = None
     if target_stats is not None:
         cond = torch.tensor(target_stats, dtype=torch.float32).unsqueeze(0).to(DEVICE)
@@ -1161,8 +1610,19 @@ def generate_multi(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8,
     stream_steps = [[] for _ in range(N_STREAMS)]
     ctx = all_f[np.random.choice(len(all_f), CONTEXT_LEN, replace=True)]
 
+    vis_steps = []
+
     # reset attractor states for fresh generation
     model.attractor_state.zero_()
+
+    def _halton(i, base):
+        f = 1.0
+        r = 0.0
+        while i > 0:
+            f /= base
+            r += f * (i % base)
+            i //= base
+        return r
 
     for si in range(n_steps):
         if si % 50 == 0: print(f"\r  [{si}/{n_steps}]", end="", flush=True)
@@ -1170,8 +1630,30 @@ def generate_multi(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8,
         if noise_inject > 0:
             ct = ct + torch.randn_like(ct) * noise_inject
 
+        # visual context for this step
+        vis_in = None
+        if v_ctx is not None:
+            vis_in = torch.tensor(v_ctx, dtype=torch.float32).unsqueeze(0).to(DEVICE)
+
         for s_idx in range(N_STREAMS):
-            result = model.step(ct, stream_idx=s_idx, temp=temp, cond=cond)
+            result = model.step(ct, stream_idx=s_idx, temp=temp, cond=cond, vis_states=vis_in)
+            if vis_engine is not None and "v_cluster" in result:
+                vb = result.get("v_blend")
+                if vb is not None:
+                    # Halton low-discrepancy scan guarantees the whole canvas is
+                    # visited step by step; the brain only jitters around it.
+                    gi = si * N_STREAMS + s_idx
+                    hx = _halton(gi + 1, 2)
+                    hy = _halton(gi + 1, 3)
+                    jx = float(np.clip(vb[0] * 0.5 + 0.5, 0, 1)) * 0.22 - 0.11
+                    jy = float(np.clip(vb[1] * 0.5 + 0.5, 0, 1)) * 0.22 - 0.11
+                    vis_steps.append({
+                        "cluster": result["v_cluster"],
+                        "pos_x": float(np.clip(hx + jx, 0, 1)),
+                        "pos_y": float(np.clip(hy + jy, 0, 1)),
+                        "scale": float(np.clip(1.2 + vb[2] * 1.8, 0.5, 3.0)),
+                        "alpha": float(np.clip(vb[3] * 0.5 + 0.5, 0.05, 1.0)),
+                    })
 
             stream_steps[s_idx].append({
                 "cluster": result["cluster"],
@@ -1193,6 +1675,17 @@ def generate_multi(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8,
         ctx = np.roll(ctx, -1, axis=0)
         ctx[-1] = feedback_feat
 
+        # visual context feedback: roll the visual context, inject a fresh visual feature
+        if v_ctx is not None and vis_engine is not None and vis_steps:
+            _vc = vis_steps[-1]["cluster"]
+            grains = vis_engine.cluster_map.get(_vc, [])
+            v_ctx = np.roll(v_ctx, -1, axis=0)
+            if grains:
+                ln, gi = grains[(si * 7) % len(grains)]
+                v_ctx[-1] = _visual_feat_for_grain(vis_pool, ln, gi)
+            else:
+                v_ctx[-1] = v_all_f[np.random.randint(len(v_all_f))]
+
     print(f"\r  Generating {N_STREAMS} streams...")
     stereo = engine.synthesize_multi(list(enumerate(stream_steps)), dur)
 
@@ -1207,7 +1700,13 @@ def generate_multi(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8,
     if stereo.shape[1] > fade*2:
         stereo[0,:fade] *= np.linspace(0,1,fade); stereo[1,:fade] *= np.linspace(0,1,fade)
         stereo[0,-fade:] *= np.linspace(1,0,fade); stereo[1,-fade:] *= np.linspace(1,0,fade)
-    return stereo, score
+
+    image = None
+    if vis_engine is not None and vis_steps:
+        image = vis_engine.render(vis_steps, VIS_CANVAS_SIZE)
+        print(f"   🖼️ Cover art: {len(vis_steps)} visual grains → {VIS_CANVAS_SIZE}px")
+
+    return stereo, score, image
 
 
 def generate(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8, bars=8, bpm=120, closed_loop=0,
@@ -1358,6 +1857,54 @@ def generate(model, engine, critic, pool, n_seconds=16, seed=42, temp=0.8, bars=
     return stereo, score
 
 
+def attach_cover_to_wav(wav_path, image):
+    """Embed a cover image into the generated WAV as an ID3v2.3 APIC frame
+    carried in a standard RIFF 'ID3 ' chunk.
+
+    Readers that look for ID3 tags on WAV (Music.app/iTunes, QuickLook,
+    foobar, TagLib-based tools, Windows Explorer thumbnails) will show the
+    artwork with the file. The audio data itself is untouched by the
+    insertion; the RIFF size header is updated accordingly.
+    """
+    try:
+        from mutagen.id3 import ID3, APIC
+        import io, struct
+    except Exception:
+        print("   (mutagen not available — cover left as separate PNG)")
+        return False
+    try:
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+
+        tag = ID3()
+        tag.add(APIC(encoding=3, mime="image/png", type=3, desc="Cover",
+                     data=buf.getvalue()))
+        tio = io.BytesIO()
+        tag.save(fileobj=tio, v2_version=3)
+        tag_bytes = tio.getvalue()
+
+        with open(wav_path, "rb") as f:
+            raw = bytearray(f.read())
+        if len(raw) < 12 or raw[:4] != b"RIFF" or raw[8:12] != b"WAVE":
+            print("   (not a RIFF WAVE — cover left as separate PNG)")
+            return False
+        riff_size = struct.unpack("<I", raw[4:8])[0]
+
+        chunk = b"ID3 " + struct.pack("<I", len(tag_bytes)) + tag_bytes
+        if len(chunk) % 2:
+            chunk += b"\x00"
+
+        raw[12:12] = chunk
+        raw[4:8] = struct.pack("<I", riff_size + len(chunk))
+        with open(wav_path, "wb") as f:
+            f.write(raw)
+        print(f"   🖼️ Cover embedded into WAV ({len(tag_bytes)} bytes APIC chunk)")
+        return True
+    except Exception as e:
+        print(f"   (cover embed failed: {e})")
+        return False
+
+
 def main():
     import argparse
     p = argparse.ArgumentParser()
@@ -1378,6 +1925,9 @@ def main():
     p.add_argument("--train-multi", action="store_true", help="Train MultiNavigator (6-stream model)")
     p.add_argument("--pool", type=str, default=None, help="Path to grain pool .npz (skips scan/build)")
     p.add_argument("--model", type=str, default=None, help="Path to trained model .pt (skips training)")
+    p.add_argument("--visual", action="store_true", help="Enable visual/cover-art generation alongside audio")
+    p.add_argument("--train-visual", action="store_true", help="Train the visual head (needs image pool)")
+    p.add_argument("--vis-pool", type=str, default=None, help="Path to visual grain pool .npz (skips image scan)")
     args = p.parse_args()
     t0 = time.time()
 
@@ -1425,13 +1975,44 @@ def main():
 
     pairs = build_training_pairs(pool, clusters)
 
+    # ── Visual pool (optional) ──────────────────────────────────────
+    vis_pool = None
+    vis_clusters = None
+    vis_engine = None
+    vis_pairs = []
+    if args.visual or args.train_visual:
+        vis_cache = args.vis_pool if args.vis_pool else VIS_POOL_CACHE
+        if os.path.exists(vis_cache):
+            print(f"📦 Loading visual pool: {vis_cache}")
+            d = np.load(vis_cache, allow_pickle=True)
+            vis_pool = {k: d[k] for k in d.files}
+        else:
+            image_files = scan_images(VISUAL_SCAN_DIRS)
+            print(f"   {len(image_files)} images found")
+            if image_files:
+                extractor = VisualGrainExtractor()
+                vis_pool = extractor.extract(image_files)
+                np.savez(vis_cache,
+                    micro_feats=vis_pool["micro_feats"],
+                    meso_feats=vis_pool["meso_feats"],
+                    macro_feats=vis_pool["macro_feats"],
+                    micro_patches=vis_pool["micro_patches"],
+                    meso_patches=vis_pool["meso_patches"],
+                    macro_patches=vis_pool["macro_patches"])
+                print(f"💾 Visual pool saved: {os.path.getsize(vis_cache)/1e6:.1f} MB")
+        if vis_pool is not None and len(vis_pool.get("micro_feats", [])) > 0:
+            vis_clusters = build_visual_clusters(vis_pool)
+            vis_engine = VisualEngine(vis_pool, vis_clusters)
+            vis_pairs = build_visual_training_pairs(vis_pool, vis_clusters)
+
     if not args.generate_only and pairs:
         if args.train_multi:
             model_ms = MultiNavigator().to(DEVICE)
             if os.path.exists(MODEL_MULTI_CACHE):
                 print(f"📦 Loading multi-model (strict=False for attractor init): {MODEL_MULTI_CACHE}")
                 model_ms.load_state_dict(torch.load(MODEL_MULTI_CACHE, map_location=DEVICE, weights_only=False)["model_state"], strict=False)
-            model_ms = train_multi(model_ms, pairs, n_steps=args.train_steps)
+            model_ms = train_multi(model_ms, pairs, n_steps=args.train_steps,
+                vis_pairs=vis_pairs if args.train_visual else None)
             torch.save({"model_state": model_ms.state_dict()}, MODEL_MULTI_CACHE)
         else:
             model = Navigator().to(DEVICE)
@@ -1463,16 +2044,20 @@ def main():
         model.load_state_dict(torch.load(single_model_path, map_location=DEVICE, weights_only=False)["model_state"])
 
     n_sec = args.bars * 4 * 60.0 / args.bpm
+    image = None
 
     if args.multi_stream:
-        stereo, score = generate_multi(model_ms, engine, critic, pool, n_seconds=n_sec,
+        stereo, score, image = generate_multi(model_ms, engine, critic, pool, n_seconds=n_sec,
             seed=args.seed, temp=args.temperature, bars=args.bars, bpm=args.bpm,
-            target_stats=target_stats, noise_inject=args.noise_inject)
+            target_stats=target_stats, noise_inject=args.noise_inject,
+            vis_engine=vis_engine if args.visual else None,
+            vis_pool=vis_pool if args.visual else None)
     else:
         stereo, score = generate(model, engine, critic, pool, n_seconds=n_sec,
             seed=args.seed, temp=args.temperature, bars=args.bars, bpm=args.bpm,
             closed_loop=args.closed_loop, target_stats=target_stats,
             noise_inject=args.noise_inject)
+        image = None
 
     import datetime
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1484,6 +2069,11 @@ def main():
     print(f"\n✅ {out} ({dur:.1f}s stereo)")
     print(f"   RMS: {rms:.3f} ({20*np.log10(rms+1e-10):.1f} dBFS) Peak: {np.max(np.abs(stereo)):.3f}")
     print(f"   Critic: {score:.3f}")
+    if image is not None:
+        img_out = os.path.join(OUT, f"cover_{args.bars}bars_{ts}.png")
+        image.save(img_out)
+        print(f"🖼️ ✅ {img_out}")
+        attach_cover_to_wav(out, image)
     print(f"⏱️ {time.time()-t0:.1f}s")
 
 if __name__ == "__main__":

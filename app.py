@@ -242,10 +242,11 @@ class GenerateWorker(QObject):
     done = Signal(object)
     error = Signal(str)
 
-    def __init__(self, bars, bpm, temp, seed, multi, closed, train_multi):
+    def __init__(self, bars, bpm, temp, seed, multi, closed, train_multi, visual=False):
         super().__init__()
         self.bars, self.bpm, self.temp = bars, bpm, temp
         self.seed, self.multi, self.closed, self.train_multi = seed, multi, closed, train_multi
+        self.visual = visual
 
     def run(self):
         try:
@@ -260,6 +261,8 @@ class GenerateWorker(QObject):
                 args.extend(["--closed-loop", "8"])
             if self.train_multi:
                 args.append("--train-multi")
+            if self.visual:
+                args.append("--visual")
 
             self.progress.emit(10, "")
 
@@ -292,6 +295,7 @@ class App(QWidget):
 
         self.generating = False
         self.last_output = None
+        self.last_cover = None
         self.settings_open = False
         self.player = QMediaPlayer(self)
         self.audio_output = QAudioOutput(self)
@@ -470,6 +474,9 @@ class App(QWidget):
         row4 = QHBoxLayout()
         self.train_multi_check = QCheckBox("Train MultiNavigator")
         row4.addWidget(self.train_multi_check)
+        self.visual_check = QCheckBox("Cover Art")
+        self.visual_check.setToolTip("Generate a matching visual from your images (same brain)")
+        row4.addWidget(self.visual_check)
         row4.addStretch()
         col.addLayout(row4)
 
@@ -485,6 +492,7 @@ class App(QWidget):
         if s.get("temp"): self.temp_slider.setValue(int(float(s["temp"]) * 100))
         if "multi" in s: self.multi_check.setChecked(bool(s["multi"]))
         if "closed" in s: self.closed_check.setChecked(bool(s["closed"]))
+        if "visual" in s: self.visual_check.setChecked(bool(s["visual"]))
         if s.get("seed"): self.seed_edit.setText(str(s["seed"]))
 
     def _save_settings(self):
@@ -494,6 +502,7 @@ class App(QWidget):
             "temp": self.temp_slider.value() / 100.0,
             "multi": self.multi_check.isChecked(),
             "closed": self.closed_check.isChecked(),
+            "visual": self.visual_check.isChecked(),
             "seed": self.seed_edit.text(),
         })
 
@@ -548,9 +557,10 @@ class App(QWidget):
         multi = self.multi_check.isChecked()
         closed = self.closed_check.isChecked()
         train_multi = self.train_multi_check.isChecked()
+        visual = self.visual_check.isChecked()
 
         self._gen_thread = QThread()
-        self._gen_worker = GenerateWorker(bars, bpm, temp, seed, multi, closed, train_multi)
+        self._gen_worker = GenerateWorker(bars, bpm, temp, seed, multi, closed, train_multi, visual=visual)
         self._gen_worker.moveToThread(self._gen_thread)
         self._gen_thread.started.connect(self._gen_worker.run)
         self._gen_worker.progress.connect(self._on_gen_progress)
@@ -575,11 +585,21 @@ class App(QWidget):
             self._generation_timer.stop()
         if latest:
             self.last_output = latest
+            self.last_cover = None
+            # find matching cover art: cover_*_<same timestamp>.png
+            base = latest.stem
+            # wav name: granular_<bars>bars_<ts> -> cover_<bars>bars_<ts>.png
+            if "_" in base:
+                ts = base.rsplit("_", 1)[-1]
+                for c in OUT.glob(f"cover_*_{ts}.png"):
+                    self.last_cover = c
+                    break
             self.waveform.set_playback_position(0.0)
             size_mb = latest.stat().st_size / 1024 / 1024
             dur = self._bars * 4 * 60 / self._bpm
             self.output_name.setText(latest.name)
-            self.output_info.setText(f"{dur:.0f}s · {size_mb:.1f} MB · {self._bars} bars @ {self._bpm} BPM")
+            cover_txt = " · cover art" if self.last_cover else ""
+            self.output_info.setText(f"{dur:.0f}s · {size_mb:.1f} MB · {self._bars} bars @ {self._bpm} BPM{cover_txt}")
             try:
                 import soundfile as sf
                 audio, sr = sf.read(str(latest))
