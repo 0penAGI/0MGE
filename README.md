@@ -38,11 +38,11 @@ Nothing to install, no command line:
 2. Unzip and drag `0MGE.app` to `/Applications`
 3. First launch: **right-click → Open** (unsigned build) → picks a music folder → Generate. That's it.
 
-**VST3/AU Plugin** — real-time granular processor for your DAW:
+**VENUS VST3/AU Plugin** — real-time granular processor for your DAW:
 
 1. Download [`0MGE-1.0.0-macOS.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
-2. Double-click the `.pkg` → pick **VST3 + AU Plugin** and/or **Standalone App**
-3. Enter admin password → restart your DAW — 0MGE appears in your plugin list
+2. Double-click the `.pkg` and install the VST3 + AU plugin
+3. Restart your DAW and look for **VENUS**
 
 **Run from source** (Linux/Windows or power users):
 
@@ -160,27 +160,24 @@ PySide6 (Qt) desktop interface. The main way to use 0MGE.
 - Optional **Cover Art checkbox** — generates and embeds an album cover into the WAV
 - Settings persist between sessions
 
-### VST3/AU Plugin
+### VENUS VST3/AU Plugin
 
 ![VST Plugin](vst.png)
 
-**Completely separate from the neural engine.** A real-time granular processor built with JUCE 8.0.6. No AI — pure DSP.
+**VENUS** is a real-time granular processor built with JUCE 8.0.6. It is a separate audio effect from the neural engine: no AI, pure DSP.
 
 Takes incoming audio from your DAW and chops it into grains in real time. Each grain is a tiny snapshot of the input signal, played back with its own pitch, position, direction, and spatial placement.
 
-**9 knobs:** Density, Pitch, Stretch, Reverse, Size, Scatter, Mix, Freeze, Focus
+**8 controls:** Density, Pitch, Reverse, Size, Scatter, Mix, Freeze, Focus
 
-**Freeze reverb:** LP filter + 12% L/R crossfeed in feedback path. Creates evolving drones from any input.
-
-**32 voices**, COLA Hanning envelope (click-free), circular buffer (10s at 48kHz).
+32 overlapping grains, stereo capture, Hann grain envelopes, and a 10-second circular input buffer.
 
 #### Install on macOS (easiest)
 
 1. Download [`0MGE-1.0.0-macOS.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
 2. Double-click the `.pkg` file
-3. Pick **VST3 + AU Plugin** and/or **Standalone App**
-4. Enter your admin password
-5. Restart your DAW — 0MGE appears in your plugin list
+3. Install **VENUS VST3 + AU Plugin**
+4. Restart your DAW — **VENUS** appears in your plugin list
 
 #### Install manually (no installer)
 
@@ -188,13 +185,10 @@ Download, unzip, copy to your DAW's plugin folder:
 
 ```bash
 # VST3
-cp -R 0MGE.vst3 ~/Library/Audio/Plug-Ins/VST3/
+cp -R VENUS.vst3 ~/Library/Audio/Plug-Ins/VST3/
 
 # AU (Logic)
-cp -R 0MGE.component ~/Library/Audio/Plug-Ins/Components/
-
-# Standalone
-cp -R 0MGE.app /Applications/
+cp -R VENUS.component ~/Library/Audio/Plug-Ins/Components/
 ```
 
 Restart your DAW after copying. Uninstall: delete the files above.
@@ -205,6 +199,12 @@ Restart your DAW after copying. Uninstall: delete the files above.
 cd vst && mkdir build && cd build
 cmake -G Xcode .. && cmake --build . --config Release
 ```
+
+### TRASHER VST3/AU — Multiband Waveshaper
+
+[TRASHER](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a TEMƎT multiband distortion effect in the visual style of VENUS. It splits audio into 1–4 bands, each with two serial shaping stages, editable curves, and per-band Solo/Mute. Choose Soft Saturation, Hard Clip, Wavefold, Fuzz, Steps, Rectify, Orbit, Splinter, or Clean; add resonant low-pass, band-pass, or high-pass filtering with envelope or tempo-synced LFO modulation. Global Mix/Output and a dual-spectrum display complete the effect.
+
+Download [TRASHER-0.1.0-macOS-arm64.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64.zip) from the [0MGE v1.0.0 release](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0). Unzip it, then copy `TRASHER.vst3` to `~/Library/Audio/Plug-Ins/VST3/` and/or `TRASHER.component` to `~/Library/Audio/Plug-Ins/Components/`. The archive also includes `TRASHER.app`. Built for Apple Silicon macOS 15.1 or later.
 
 ### Neural Engine
 
@@ -298,11 +298,11 @@ First run: pick a music folder → Generate. It scans your library, builds the g
 pool (~64 MB) and trains the navigator locally. Output goes to
 `~/Library/Application Support/0MGE/granular_output/`.
 
-### VST3 / AU Plugin Installer
+### VENUS VST3 / AU Plugin Installer
 
 | Platform | File | Install |
 |----------|------|---------|
-| macOS | [0MGE-1.0.0-macOS.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) (8.6 MB) | Double-click → pick components → admin password → done |
+| macOS | [0MGE-1.0.0-macOS.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) (2.8 MB) | Double-click → install VENUS → restart DAW |
 | Windows | `0MGE_setup.exe` | Coming soon |
 
 ### Manual Install (no installer needed)
@@ -311,14 +311,14 @@ Download, unzip, copy to your DAW's plugin folder:
 
 | What | Download | Unzip & copy to |
 |------|----------|-----------------|
-| **VST3** (macOS) | [0MGE-vst3-macOS.zip](0MGE-vst3-macOS.zip) (1.4 MB) | `~/Library/Audio/Plug-Ins/VST3/` |
-| **AU** (macOS, Logic only) | [0MGE-au-macOS.zip](0MGE-au-macOS.zip) (1.3 MB) | `~/Library/Audio/Plug-Ins/Components/` |
+| **VST3** (macOS) | `VENUS.vst3` | `~/Library/Audio/Plug-Ins/VST3/` |
+| **AU** (macOS, Logic only) | `VENUS.component` | `~/Library/Audio/Plug-Ins/Components/` |
 | **Standalone App** (macOS) | [0MGE-app-macOS.zip](0MGE-app-macOS.zip) (1.6 MB) | Drag `0MGE.app` to `/Applications/` |
 
 ```bash
 # After unzipping:
-cp -R 0MGE.vst3 ~/Library/Audio/Plug-Ins/VST3/
-cp -R 0MGE.component ~/Library/Audio/Plug-Ins/Components/
+cp -R VENUS.vst3 ~/Library/Audio/Plug-Ins/VST3/
+cp -R VENUS.component ~/Library/Audio/Plug-Ins/Components/
 cp -R 0MGE.app /Applications/
 ```
 
