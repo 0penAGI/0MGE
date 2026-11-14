@@ -204,7 +204,7 @@ cmake -G Xcode .. && cmake --build . --config Release
 
 [TRASHER](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a TEMƎT multiband distortion effect in the visual style of VENUS. It splits audio into 1–4 bands, each with two serial shaping stages, editable curves, and per-band Solo/Mute. Choose Soft Saturation, Hard Clip, Wavefold, Fuzz, Steps, Rectify, Orbit, Splinter, or Clean; add resonant low-pass, band-pass, or high-pass filtering with envelope or tempo-synced LFO modulation. Global Mix/Output and a dual-spectrum display complete the effect.
 
-Download [TRASHER-0.1.0-macOS-arm64.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64.zip) from the [0MGE v1.0.0 release](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0). Unzip it, then copy `TRASHER.vst3` to `~/Library/Audio/Plug-Ins/VST3/` and/or `TRASHER.component` to `~/Library/Audio/Plug-Ins/Components/`. The archive also includes `TRASHER.app`. Built for Apple Silicon macOS 15.1 or later.
+Download [TRASHER-0.1.0-macOS-arm64-2026-11-14.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14.zip) from the [0MGE v1.0.0 release](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0). Unzip it, then copy `TRASHER.vst3` to `~/Library/Audio/Plug-Ins/VST3/` and/or `TRASHER.component` to `~/Library/Audio/Plug-Ins/Components/`. The archive also includes `TRASHER.app`. Built for Apple Silicon macOS 15.1 or later.
 
 ### Neural Engine
 
