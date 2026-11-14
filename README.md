@@ -40,7 +40,7 @@ Nothing to install, no command line:
 
 **TEMƎT Audio Plugins** — one installer for VENUS, TRASHER, and SIGNAL (VST3 + AU):
 
-1. Download [`TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
+1. Download [`TEMET-Audio-Plugins-1.1.1-macOS-arm64.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TEMET-Audio-Plugins-1.1.1-macOS-arm64.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
 2. Double-click the `.pkg` and install the plugins for your user
 3. Restart your DAW and look for **VENUS**, **TRASHER**, and **SIGNAL**
 
@@ -174,7 +174,7 @@ Takes incoming audio from your DAW and chops it into grains in real time. Each g
 
 #### Install on macOS (easiest)
 
-1. Choose either the [VENUS-only installer](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) or the [one-click installer for all three plugins](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg)
+1. Choose either the [VENUS-only installer](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) or the [one-click installer for all three plugins](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TEMET-Audio-Plugins-1.1.1-macOS-arm64.pkg)
 2. Double-click the `.pkg` file and install it for your user
 3. Restart your DAW — the plugin(s) appear in your list
 
@@ -203,11 +203,11 @@ cmake -G Xcode .. && cmake --build . --config Release
 
 [TRASHER](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a TEMƎT multiband distortion effect in the visual style of VENUS. It splits audio into 1–4 bands, each with two serial shaping stages, editable curves, and per-band Solo/Mute. Choose Soft Saturation, Hard Clip, Wavefold, Fuzz, Steps, Rectify, Orbit, Splinter, or Clean; add resonant low-pass, band-pass, or high-pass filtering with envelope or tempo-synced LFO modulation. Global Mix/Output and a dual-spectrum display complete the effect.
 
-Download [TRASHER-0.1.0-macOS-arm64-2026-11-14.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14.zip) from the [0MGE v1.0.0 release](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0). Unzip it, then copy `TRASHER.vst3` to `~/Library/Audio/Plug-Ins/VST3/` and/or `TRASHER.component` to `~/Library/Audio/Plug-Ins/Components/`. The archive also includes `TRASHER.app`. Built for Apple Silicon macOS 15.1 or later.
+For one-click installation, download [TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg). The [ZIP bundle](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.zip) also includes the standalone app. Both are built for Apple Silicon macOS 15.1 or later.
 
 ### SIGNAL VST3/AU — Dual Wavetable + Granular Synth
 
-[SIGNAL](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a 12-voice MIDI instrument with two independently configurable oscillators. Each oscillator can use wavetable or granular playback, with cross-modulation, ADSR, and per-parameter LFOs. The [SIGNAL archive](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14.zip) includes VST3, AU, and standalone builds for Apple Silicon macOS 15.1 or later.
+[SIGNAL](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a MIDI instrument with selectable 1 / 2 / 4 / 8 / 12 voice polyphony and two independently configurable oscillators. Each oscillator can use wavetable or granular playback, with cross-modulation, ADSR, and per-parameter LFOs. Install the VST3 + AU with [SIGNAL's one-click installer](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.pkg). Its [ZIP bundle](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.zip) also includes the standalone app. Built for Apple Silicon macOS 15.1 or later.
 
 ### Neural Engine
 
@@ -305,20 +305,26 @@ pool (~64 MB) and trains the navigator locally. Output goes to
 
 | Platform | File | Install |
 |----------|------|---------|
-| macOS | [TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg) (16 MB) | Double-click → install VENUS + TRASHER + SIGNAL → restart DAW |
+| macOS | [TEMET-Audio-Plugins-1.1.1-macOS-arm64.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TEMET-Audio-Plugins-1.1.1-macOS-arm64.pkg) (16 MB) | Double-click → install VENUS + TRASHER + SIGNAL → restart DAW |
 | macOS | [0MGE-1.0.0-macOS.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) (2.8 MB) | VENUS only → restart DAW |
 | Windows | `0MGE_setup.exe` | Coming soon |
 
-The package installs all three plugins' VST3 and AU versions into your user's
-`~/Library/Audio/Plug-Ins/` folders. The SIGNAL and TRASHER archives are also
-available separately in [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0).
+The combined package installs all three plugins' VST3 and AU versions into your
+user's `~/Library/Audio/Plug-Ins/` folders.
 
-### Individual Plugin Archives
+### Individual One-click Plugin Installers
+
+| Plugin | Installer | Installs |
+|--------|-----------|----------|
+| **TRASHER** | [TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg) | VST3 + AU |
+| **SIGNAL** | [SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.pkg) | VST3 + AU |
+
+### ZIP Bundles with Standalone Apps
 
 | Plugin | Download | Includes |
 |--------|----------|----------|
-| **TRASHER** | [TRASHER-0.1.0-macOS-arm64-2026-11-14.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14.zip) | VST3, AU, Standalone |
-| **SIGNAL** | [SIGNAL-0.1.0-macOS-arm64-2026-11-14.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14.zip) | VST3, AU, Standalone |
+| **TRASHER** | [TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.zip) | VST3, AU, Standalone |
+| **SIGNAL** | [SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.zip) | VST3, AU, Standalone |
 
 ### Manual Install (no installer needed)
 
