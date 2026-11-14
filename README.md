@@ -38,11 +38,11 @@ Nothing to install, no command line:
 2. Unzip and drag `0MGE.app` to `/Applications`
 3. First launch: **right-click → Open** (unsigned build) → picks a music folder → Generate. That's it.
 
-**VENUS VST3/AU Plugin** — real-time granular processor for your DAW:
+**TEMƎT Audio Plugins** — one installer for VENUS, TRASHER, and SIGNAL (VST3 + AU):
 
-1. Download [`0MGE-1.0.0-macOS.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
-2. Double-click the `.pkg` and install the VST3 + AU plugin
-3. Restart your DAW and look for **VENUS**
+1. Download [`TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
+2. Double-click the `.pkg` and install the plugins for your user
+3. Restart your DAW and look for **VENUS**, **TRASHER**, and **SIGNAL**
 
 **Run from source** (Linux/Windows or power users):
 
@@ -174,10 +174,10 @@ Takes incoming audio from your DAW and chops it into grains in real time. Each g
 
 #### Install on macOS (easiest)
 
-1. Download [`0MGE-1.0.0-macOS.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
+1. Download [`TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg`](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg) from [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0)
 2. Double-click the `.pkg` file
-3. Install **VENUS VST3 + AU Plugin**
-4. Restart your DAW — **VENUS** appears in your plugin list
+3. Install **VENUS, TRASHER, and SIGNAL VST3 + AU plugins** for your user
+4. Restart your DAW — all three appear in your plugin list
 
 #### Install manually (no installer)
 
@@ -205,6 +205,10 @@ cmake -G Xcode .. && cmake --build . --config Release
 [TRASHER](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a TEMƎT multiband distortion effect in the visual style of VENUS. It splits audio into 1–4 bands, each with two serial shaping stages, editable curves, and per-band Solo/Mute. Choose Soft Saturation, Hard Clip, Wavefold, Fuzz, Steps, Rectify, Orbit, Splinter, or Clean; add resonant low-pass, band-pass, or high-pass filtering with envelope or tempo-synced LFO modulation. Global Mix/Output and a dual-spectrum display complete the effect.
 
 Download [TRASHER-0.1.0-macOS-arm64-2026-11-14.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14.zip) from the [0MGE v1.0.0 release](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0). Unzip it, then copy `TRASHER.vst3` to `~/Library/Audio/Plug-Ins/VST3/` and/or `TRASHER.component` to `~/Library/Audio/Plug-Ins/Components/`. The archive also includes `TRASHER.app`. Built for Apple Silicon macOS 15.1 or later.
+
+### SIGNAL VST3/AU — Dual Wavetable + Granular Synth
+
+[SIGNAL](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a 12-voice MIDI instrument with two independently configurable oscillators. Each oscillator can use wavetable or granular playback, with cross-modulation, ADSR, and per-parameter LFOs. The [SIGNAL archive](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14.zip) includes VST3, AU, and standalone builds for Apple Silicon macOS 15.1 or later.
 
 ### Neural Engine
 
@@ -298,12 +302,23 @@ First run: pick a music folder → Generate. It scans your library, builds the g
 pool (~64 MB) and trains the navigator locally. Output goes to
 `~/Library/Application Support/0MGE/granular_output/`.
 
-### VENUS VST3 / AU Plugin Installer
+### TEMƎT Audio Plugins One-click Installer
 
 | Platform | File | Install |
 |----------|------|---------|
-| macOS | [0MGE-1.0.0-macOS.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/0MGE-1.0.0-macOS.pkg) (2.8 MB) | Double-click → install VENUS → restart DAW |
+| macOS | [TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TEMET-Audio-Plugins-1.1.0-macOS-arm64.pkg) (16 MB) | Double-click → install VENUS + TRASHER + SIGNAL → restart DAW |
 | Windows | `0MGE_setup.exe` | Coming soon |
+
+The package installs all three plugins' VST3 and AU versions into your user's
+`~/Library/Audio/Plug-Ins/` folders. The SIGNAL and TRASHER archives are also
+available separately in [Releases](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0).
+
+### Individual Plugin Archives
+
+| Plugin | Download | Includes |
+|--------|----------|----------|
+| **TRASHER** | [TRASHER-0.1.0-macOS-arm64-2026-11-14.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14.zip) | VST3, AU, Standalone |
+| **SIGNAL** | [SIGNAL-0.1.0-macOS-arm64-2026-11-14.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14.zip) | VST3, AU, Standalone |
 
 ### Manual Install (no installer needed)
 
