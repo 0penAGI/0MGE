@@ -203,11 +203,11 @@ cmake -G Xcode .. && cmake --build . --config Release
 
 [TRASHER](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a TEMƎT multiband distortion effect in the visual style of VENUS. It splits audio into 1–4 bands, each with two serial shaping stages, editable curves, and per-band Solo/Mute. Choose Soft Saturation, Hard Clip, Wavefold, Fuzz, Steps, Rectify, Orbit, Splinter, or Clean; add resonant low-pass, band-pass, or high-pass filtering with envelope or tempo-synced LFO modulation. Global Mix/Output and a dual-spectrum display complete the effect.
 
-For one-click installation, download [TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg). The [ZIP bundle](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.zip) also includes the standalone app. Both are built for Apple Silicon macOS 15.1 or later.
+Download [TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg) for one-click installation of its VST3 and AU versions. Built for Apple Silicon macOS 15.1 or later.
 
 ### SIGNAL VST3/AU — Dual Wavetable + Granular Synth
 
-[SIGNAL](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a MIDI instrument with selectable 1 / 2 / 4 / 8 / 12 voice polyphony and two independently configurable oscillators. Each oscillator can use wavetable or granular playback, with cross-modulation, ADSR, and per-parameter LFOs. Install the VST3 + AU with [SIGNAL's one-click installer](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.pkg). Its [ZIP bundle](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.zip) also includes the standalone app. Built for Apple Silicon macOS 15.1 or later.
+[SIGNAL](https://github.com/0penAGI/0MGE/releases/tag/v1.0.0) is a MIDI instrument with selectable 1 / 2 / 4 / 8 / 12 voice polyphony and two independently configurable oscillators. Each oscillator can use wavetable or granular playback, with cross-modulation, ADSR, and per-parameter LFOs. [SIGNAL's one-click installer](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.pkg) installs its VST3 and AU versions. Built for Apple Silicon macOS 15.1 or later.
 
 ### Neural Engine
 
@@ -318,13 +318,6 @@ user's `~/Library/Audio/Plug-Ins/` folders.
 |--------|-----------|----------|
 | **TRASHER** | [TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.pkg) | VST3 + AU |
 | **SIGNAL** | [SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.pkg](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.pkg) | VST3 + AU |
-
-### ZIP Bundles with Standalone Apps
-
-| Plugin | Download | Includes |
-|--------|----------|----------|
-| **TRASHER** | [TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/TRASHER-0.1.0-macOS-arm64-2026-11-14-r2.zip) | VST3, AU, Standalone |
-| **SIGNAL** | [SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.zip](https://github.com/0penAGI/0MGE/releases/download/v1.0.0/SIGNAL-0.1.0-macOS-arm64-2026-11-14-r2.zip) | VST3, AU, Standalone |
 
 ### Manual Install (no installer needed)
 
